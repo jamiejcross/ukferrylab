@@ -1,0 +1,358 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<style>
+.fl-nav{--fln-bg:#0f2430;--fln-fg:#edf2f1;--fln-mute:#9db6bd;--fln-hot:#ff7443;background:var(--fln-bg);color:var(--fln-fg);font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fl-nav{--fln-bg:#050e13}}
+:root[data-theme="dark"] .fl-nav{--fln-bg:#050e13}
+.fl-nav ol{max-width:1180px;margin:0 auto;padding:10px 0;list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.fl-nav li{display:flex;align-items:center;gap:10px}
+.fl-nav li+li::before{content:"›";color:var(--fln-mute)}
+.fl-nav a{color:var(--fln-fg);text-decoration:none;border-bottom:2px solid transparent;padding:4px 0}
+.fl-nav a:hover{border-bottom-color:var(--fln-hot)}
+.fl-nav a:focus-visible{outline:3px solid var(--fln-hot);outline-offset:3px}
+.fl-nav .fl-home{font-family:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;font-weight:800;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.fl-nav [aria-current]{color:var(--fln-mute)}
+</style><nav class="fl-nav" aria-label="Site"><ol><li><a class="fl-home" href="../../index.html">UK Ferry Lab</a></li><li><a href="../../lab/index.html">Ferry Lab</a></li><li><a href="../index.html">Games</a></li><li><span aria-current="page">Top Trumps</span></li></ol></nav>
+<title>Ferry Top Trumps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a chart-table — two cards face to face across a "harbour" strip, scoreboard above, round log below. Tokens match the Wave Lab. */
+:root{
+  --paper:#edf2f1; --card:#f9fbfb; --ink:#0f2430; --muted:#4b6571; --line:#c9d7d7;
+  --signal:#d9481a; --signal-ink:#ffffff; --sea:#145565; --sea-soft:#d6e6e6;
+  --good:#1f7a4d; --bad:#b3261e; --draw:#b26b00;
+  --hull:#14324a; --deck:#ffffff; --funnel:#d9481a; --water:#7fb2bd;
+  --back1:#145565; --back2:#0f2430;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0; --sea-soft:#163541;
+  --good:#5fd39a; --bad:#ff8a80; --draw:#f2b44c;
+  --hull:#9cc3d6; --deck:#e8f1f3; --funnel:#ff7443; --water:#2c6675;
+  --back1:#1b4b5a; --back2:#0d1d25; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0; --sea-soft:#163541;
+  --good:#5fd39a; --bad:#ff8a80; --draw:#f2b44c;
+  --hull:#9cc3d6; --deck:#e8f1f3; --funnel:#ff7443; --water:#2c6675;
+  --back1:#1b4b5a; --back2:#0d1d25; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 24px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sea)}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(40px,7vw,68px);line-height:.92;margin:4px 0 0;text-wrap:balance;text-transform:uppercase}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label.sel{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+select,button{font:inherit}
+select{padding:8px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px}
+.btn{padding:10px 16px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;font-weight:700}
+.btn.primary{background:var(--signal);color:var(--signal-ink);border-color:var(--signal)}
+.btn:focus-visible,.stat:focus-visible,select:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:default}
+
+.board{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:start}
+@media (max-width:720px){.board{grid-template-columns:1fr}.mid{order:-1}}
+.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.who{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-weight:800;font-size:24px;text-transform:uppercase;letter-spacing:.02em}
+.who .count{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--muted);text-transform:none}
+.bar{height:6px;background:var(--sea-soft);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sea);transition:width .4s}
+.side.ai .bar i{background:var(--signal)}
+
+.card{background:var(--card);border:2px solid var(--ink);border-radius:12px;overflow:hidden;position:relative;min-height:470px;display:flex;flex-direction:column}
+.card .name{font-family:var(--display);font-weight:800;font-size:28px;line-height:1;padding:12px 14px 6px;text-transform:uppercase}
+.card .name small{display:block;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.1em;margin-bottom:3px}
+.pic{background:linear-gradient(var(--sea-soft) 62%,var(--water) 62%);aspect-ratio:300/110;max-width:100%;position:relative}
+.pic svg{display:block;width:100%;height:100%}
+.badge{position:absolute;top:8px;right:8px;background:var(--draw);color:#111;font-family:var(--display);font-weight:900;font-size:14px;line-height:1;padding:6px 8px;border-radius:4px;text-transform:uppercase;transform:rotate(4deg)}
+.stats{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:3px;flex:1}
+.stat{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:7px 10px;border-radius:6px;border:1px solid transparent;background:transparent;color:inherit;width:100%;text-align:left;font-size:15px}
+.stat .k{color:var(--muted)}
+.stat .k em{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.06em;margin-left:6px;opacity:.8}
+.stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500}
+button.stat{cursor:pointer;border-color:var(--line)}
+button.stat:hover{background:var(--sea-soft);border-color:var(--sea)}
+.stat.pick{background:var(--sea-soft);border-color:var(--ink);font-weight:700}
+.stat.win{background:color-mix(in srgb,var(--good) 18%,transparent);border-color:var(--good)}
+.stat.lose{background:color-mix(in srgb,var(--bad) 14%,transparent);border-color:var(--bad)}
+.stat.tie{background:color-mix(in srgb,var(--draw) 18%,transparent);border-color:var(--draw)}
+
+.back{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#fff;
+  background:repeating-linear-gradient(45deg,var(--back1) 0 14px,var(--back2) 14px 28px);transition:opacity .35s}
+.back b{font-family:var(--display);font-weight:900;font-size:40px;letter-spacing:.04em;text-transform:uppercase;background:var(--back2);padding:6px 14px;border:2px solid #fff;border-radius:6px}
+.back span{font-family:var(--mono);font-size:12px;background:var(--back2);padding:2px 8px;border-radius:3px}
+.card.revealed .back{opacity:0;pointer-events:none}
+.empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:13px;padding:20px;text-align:center}
+
+.mid{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:40px;min-width:150px}
+.msg{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.05;text-transform:uppercase;text-align:center;text-wrap:balance;max-width:16ch;min-height:2.2em}
+.msg.good{color:var(--good)}.msg.bad{color:var(--bad)}.msg.draw{color:var(--draw)}
+.sub{font-size:14px;color:var(--muted);text-align:center;max-width:22ch}
+.pot{font-family:var(--mono);font-size:12px;color:var(--draw)}
+
+section.info{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:720px){section.info{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.panel h2{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;margin:0 0 8px}
+.panel ol,.panel ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.log{list-style:none;padding:0!important;font-size:14px;max-height:220px;overflow:auto}
+.log li{display:grid;grid-template-columns:auto 1fr;gap:8px;border-bottom:1px solid var(--line);padding:4px 0}
+.log .r{font-family:var(--mono);font-size:12px;color:var(--muted);padding-top:2px}
+footer{font-size:13px;color:var(--muted);max-width:75ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Ferry Lab · Card game</div>
+      <h1>Ferry Top Trumps</h1>
+      <p class="lede">36 West Coast ferries, one AI skipper. Pick the stat you think beats the other card. Win both cards, take all 36 to win the game.</p>
+    </div>
+    <div class="controls">
+      <label class="sel" for="level">Opponent
+        <select id="level">
+          <option value="easy">Deckhand (easy)</option>
+          <option value="mid" selected>First Mate</option>
+          <option value="hard">Captain (hard)</option>
+        </select>
+      </label>
+      <button class="btn" id="restart" type="button">New game</button>
+    </div>
+  </header>
+
+  <div class="board">
+    <div class="side you">
+      <div class="who">You <span class="count" id="youCount"></span></div>
+      <div class="bar"><i id="youBar"></i></div>
+      <div class="card revealed" id="youCard"></div>
+    </div>
+    <div class="mid">
+      <div class="msg" id="msg">Your turn</div>
+      <div class="sub" id="sub">Tap a stat on your card</div>
+      <div class="pot" id="pot"></div>
+      <button class="btn primary" id="next" type="button" hidden>Next round</button>
+    </div>
+    <div class="side ai">
+      <div class="who">AI Skipper <span class="count" id="aiCount"></span></div>
+      <div class="bar"><i id="aiBar"></i></div>
+      <div class="card" id="aiCard"></div>
+    </div>
+  </div>
+
+  <section class="info">
+    <div class="panel">
+      <h2>How to play</h2>
+      <ol>
+        <li>Both players draw their top card. Only you can see yours.</li>
+        <li>Whoever's turn it is picks a stat. Bigger number wins, except <b>Draught</b>, where the shallower ship wins (it can reach more harbours), and <b>Year</b>, where the newer ship wins.</li>
+        <li>The winner takes both cards and picks next. A draw puts both cards in the middle for the next winner.</li>
+        <li>The Captain plays the stat its card is strongest at. The Deckhand just guesses.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h2>Ship's log</h2>
+      <ul class="log" id="log"><li><span class="r">—</span><span>Game ready. You go first.</span></li></ul>
+    </div>
+  </section>
+
+  <footer>Specs are as printed on the fleet poster, including a few odd ones (two 72 m ships listed at 6.4 m wide, for example). Loch Fyne's card gives no car figure, so it scores 0 for Cars. Ship drawings are original sketches generated from each ship's length and capacity, not photos. Not affiliated with any ferry operator.</footer>
+</div>
+
+<script>
+// name, pax, cars, weight(t), length(m), breadth(m), draught(m), year, [paxLabel], [draughtLabel]
+const RAW=[
+["Alfred",430,98,2991,84.5,22,2.75,2019],["Ali Cat",250,0,73,19,9,1.5,2000],["Argyle",450,66,2643,72,6.4,3,2007],
+["Argyle Flyer",250,0,172,30,7,2,2001],["Bute",450,60,2612,72,6.4,3,2005],["Caledonian Isles",1000,110,5221,94,15.8,3.2,1993],
+["Carvoria",12,1,11,11.6,3.45,0.5,2017],["Catriona",150,23,499,43.5,12.2,1.73,2015],["Chieftain",100,0,54.16,19.5,16.2,2.8,2007],
+["Clansman",638,90,5499,99,16.28,3.22,1998],["Coruisk",250,40,1559,65,14,3.05,2003],["Finlaggan",550,85,5626,89.8,16.4,3.4,2011],
+["Hallaig",150,23,499,43.5,12.2,1.73,2012],["Hebridean Isles",494,52,3040,85.2,15.8,3.11,1985],["Hebrides",612,98,5506,99,15.8,3.3,2000],
+["Isle of Arran",448,76,3296,84.9,15.8,3.2,1984],["Isle of Cumbrae",160,18,169,32,10,1.4,1976],["Isle of Lewis",680,123,6753,101.25,18.52,4.19,1995],
+["Isle of Mull",962,70,4719,90.03,15.8,3.19,1988],["Alainn",150,20,396,41,13.4,1.73,1997],["Loch Bhrusda",150,18,246,35.4,10.88,1.4,1996],
+["Loch Buie",250,9,295,30.2,10,1.6,1992],["Loch Dunvegan",200,36,549,54.2,13,1.6,1991],["Loch Frisa",195,40,1160,49.9,14,4,2015,null,"3.7–4"],
+["Loch Fyne",200,null,549,54.2,13.2,1.6,1991],["Loch Linnhe",200,12,206,30.2,10,1.5,1986],["Loch Portain",146,34,950,50,14,1.5,2003],
+["Loch Ranza",200,12,206,30.2,10,1.5,1987],["Loch Riddon",200,36,206,30.2,10,1.5,1986],["Loch Seaforth",1000,143,8680,117.9,18.4,4.8,2014,"700–1000"],
+["Loch Shira",250,36,549,54.2,13,1.6,1991],["Loch Striven",203,12,1060,49.9,14,4,2015,null,"3.7–4"],["Loch Tarbet",142,18,246,35.4,10.88,1.4,1996],
+["Lochinver",150,23,295,30.2,10,1.6,1992],["Lochnevis",190,16,549,54.2,13,1.6,1991],["Lord of the Isles",505,54,3504,84.6,15.8,3.19,1989]];
+
+const STATS=[
+ {key:"pax",label:"Passengers",unit:"",dir:1},
+ {key:"cars",label:"Cars",unit:"",dir:1},
+ {key:"weight",label:"Weight",unit:" t",dir:1},
+ {key:"length",label:"Length",unit:" m",dir:1},
+ {key:"breadth",label:"Breadth",unit:" m",dir:1},
+ {key:"draught",label:"Draught",unit:" m",dir:-1,note:"low wins"},
+ {key:"year",label:"Year",unit:"",dir:1,note:"newest wins"}];
+
+const DECK=RAW.map((r,i)=>({id:i,name:r[0],pax:r[1],cars:r[2],weight:r[3],length:r[4],breadth:r[5],draught:r[6],year:r[7],
+  paxLabel:r[8]||null,draughtLabel:r[9]||null,top:r[0]==="Loch Seaforth"}));
+
+// Percentile of each card on each stat (0 worst .. 1 best), used by the AI.
+const RANK={};
+STATS.forEach(s=>{const vals=DECK.map(c=>val(c,s.key)*s.dir);
+  DECK.forEach(c=>{const v=val(c,s.key)*s.dir;const below=vals.filter(x=>x<v).length,eq=vals.filter(x=>x===v).length;
+    (RANK[c.id]??={})[s.key]=(below+(eq-1)/2)/(vals.length-1);});});
+
+function val(c,k){const v=c[k];return v==null?0:v}
+function fmt(c,s){
+  if(s.key==="pax"&&c.paxLabel)return c.paxLabel;
+  if(s.key==="draught"&&c.draughtLabel)return c.draughtLabel+" m";
+  if(c[s.key]==null)return "n/a";
+  if(s.key==="year")return String(c.year);
+  return c[s.key].toLocaleString("en-GB")+s.unit;
+}
+
+// Original procedural ferry sketch, scaled by length.
+function ship(c){
+  const W=300,H=110,wl=68;
+  const L=Math.max(70,Math.min(270,40+c.length*1.95));
+  const x0=(W-L)/2,x1=x0+L;
+  const fast=c.cars===0&&c.length<35;           // passenger launches / fast ferries
+  const hullH=fast?12:Math.min(20,8+c.length*.12);
+  const decks=Math.max(1,Math.min(4,Math.round(Math.log10(Math.max(c.pax,10))*1.6-1)));
+  const dh=fast?8:Math.min(10,5+c.length*.05);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sketch of ${c.name}">`;
+  // hull: raked bow on right
+  s+=`<path d="M${x0} ${wl-hullH} L${x1-L*.08} ${wl-hullH} L${x1} ${wl-hullH-3} L${x1-L*.06} ${wl+4} L${x0+4} ${wl+4} Z" fill="var(--hull)"/>`;
+  s+=`<rect x="${x0+2}" y="${wl-hullH+hullH*.55}" width="${L*.9}" height="2" fill="var(--funnel)" opacity=".9"/>`;
+  // superstructure tiers
+  let top=wl-hullH;
+  for(let d=0;d<decks;d++){
+    const inset=L*(.06+d*.07), len=L*(fast?.62:.7)-d*L*.1;
+    const sx=x0+inset+(fast?L*.08:L*.04), y=top-dh;
+    s+=`<rect x="${sx}" y="${y}" width="${len}" height="${dh}" rx="1.5" fill="var(--deck)" stroke="var(--hull)" stroke-width=".8"/>`;
+    const n=Math.floor(len/6);
+    for(let w=1;w<n;w++)s+=`<rect x="${sx+w*6-1.6}" y="${y+dh*.32}" width="3" height="${dh*.36}" fill="var(--hull)" opacity=".75"/>`;
+    top=y;
+  }
+  // bridge + funnel
+  const bx=x0+L*(fast?.5:.58);
+  s+=`<rect x="${bx}" y="${top-dh*.8}" width="${L*.12}" height="${dh*.8}" rx="1" fill="var(--deck)" stroke="var(--hull)" stroke-width=".8"/>`;
+  if(!fast){const fx=x0+L*.32,fw=Math.max(6,L*.06),fh=Math.max(10,dh*1.6);
+    s+=`<path d="M${fx} ${top} L${fx+fw*.2} ${top-fh} L${fx+fw*1.1} ${top-fh} L${fx+fw} ${top} Z" fill="var(--funnel)"/>`;
+    s+=`<rect x="${fx+fw*.2}" y="${top-fh}" width="${fw*.9}" height="2.5" fill="var(--hull)"/>`;}
+  // mast
+  s+=`<line x1="${bx+L*.06}" y1="${top-dh*.8}" x2="${bx+L*.06}" y2="${top-dh*.8-12}" stroke="var(--hull)" stroke-width="1.2"/>`;
+  // ramp for car ferries
+  if(c.cars>0&&c.length<56)s+=`<path d="M${x1-L*.05} ${wl-hullH} l10 -10" stroke="var(--hull)" stroke-width="2.5"/>`;
+  // water
+  s+=`<path d="M0 ${wl+2} Q20 ${wl-1} 40 ${wl+2} T80 ${wl+2} T120 ${wl+2} T160 ${wl+2} T200 ${wl+2} T240 ${wl+2} T280 ${wl+2} T320 ${wl+2} V${H} H0 Z" fill="var(--water)" opacity=".85"/>`;
+  s+=`<path d="M${x0+L*.2} ${wl+10} H${x1-L*.2}" stroke="var(--deck)" stroke-width="1" opacity=".5"/>`;
+  return s+`</svg>`;
+}
+
+const $=id=>document.getElementById(id);
+let G;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function newGame(){
+  const d=shuffle(DECK.map(c=>c.id));
+  G={you:[],ai:[],pot:[],turn:"you",round:1,phase:"choose",pick:null};
+  d.forEach((id,i)=>(i%2?G.ai:G.you).push(id));
+  $("log").innerHTML="";
+  log("Cards dealt, 18 each. You go first.");
+  render();
+}
+
+function cardHTML(c,clickable,res){
+  let h=`<div class="name"><small>MV · ${c.year}</small>${c.name}</div><div class="pic">${ship(c)}${c.top?'<span class="badge">Top rating</span>':""}</div><ul class="stats">`;
+  STATS.forEach(s=>{
+    const cls=res&&res.key===s.key?" "+res.cls:"";
+    const inner=`<span class="k">${s.label}${s.note?`<em>${s.note}</em>`:""}</span><span class="v">${fmt(c,s)}</span>`;
+    h+= clickable?`<li><button type="button" class="stat${cls}" data-k="${s.key}">${inner}</button></li>`
+                 :`<li><div class="stat${cls}">${inner}</div></li>`;
+  });
+  return h+`</ul>`;
+}
+
+function render(){
+  const total=DECK.length;
+  $("youCount").textContent=`${G.you.length} cards`; $("aiCount").textContent=`${G.ai.length} cards`;
+  $("youBar").style.width=(G.you.length/total*100)+"%"; $("aiBar").style.width=(G.ai.length/total*100)+"%";
+  $("pot").textContent=G.pot.length?`${G.pot.length} cards in the middle`:"";
+  const over=!G.you.length||!G.ai.length;
+  const yc=DECK[G.you[0]], ac=DECK[G.ai[0]];
+  const res=G.result;
+  $("youCard").innerHTML=yc?cardHTML(yc,G.phase==="choose"&&G.turn==="you",res&&{key:res.key,cls:res.you}):`<div class="empty">No cards left</div>`;
+  const aiEl=$("aiCard");
+  aiEl.innerHTML=ac?cardHTML(ac,false,res&&{key:res.key,cls:res.ai})+`<div class="back"><b>Ferry Lab</b><span>${G.ai.length} cards</span></div>`:`<div class="empty">No cards left</div>`;
+  aiEl.classList.toggle("revealed",G.phase==="result"||!ac);
+  if(G.phase==="choose"&&G.turn==="you"&&!over){$("msg").className="msg";$("msg").textContent="Your turn";$("sub").textContent="Tap a stat on your card";}
+  $("next").hidden=G.phase!=="result"||over;
+  $("youCard").querySelectorAll("button.stat").forEach(b=>b.onclick=()=>play(b.dataset.k,"you"));
+}
+
+function aiChoose(c){
+  const lvl=$("level").value, r=RANK[c.id];
+  const best=STATS.slice().sort((a,b)=>r[b.key]-r[a.key])[0].key;
+  if(lvl==="hard")return best;
+  if(lvl==="mid"&&Math.random()<.6)return best;
+  return STATS[Math.floor(Math.random()*STATS.length)].key;
+}
+
+function play(key,who){
+  if(G.phase!=="choose")return;
+  const s=STATS.find(x=>x.key===key);
+  const yc=DECK[G.you[0]], ac=DECK[G.ai[0]];
+  const yv=val(yc,key)*s.dir, av=val(ac,key)*s.dir;
+  const outcome=yv>av?"you":av>yv?"ai":"draw";
+  G.phase="result";
+  G.result={key,you:outcome==="you"?"win":outcome==="ai"?"lose":"tie",ai:outcome==="ai"?"win":outcome==="you"?"lose":"tie"};
+  const ycard=G.you.shift(), acard=G.ai.shift();
+  const picker=who==="you"?"You":"AI Skipper";
+  if(outcome==="draw"){G.pot.push(ycard,acard);}
+  else{const w=outcome==="you"?G.you:G.ai; w.push(ycard,acard,...G.pot); G.pot=[]; G.turn=outcome;}
+  // keep the played cards visible for the reveal
+  G.shown=[ycard,acard];
+  const m=$("msg");
+  m.className="msg "+(outcome==="you"?"good":outcome==="ai"?"bad":"draw");
+  m.textContent=outcome==="you"?"You win the round":outcome==="ai"?"AI wins the round":"It's a draw";
+  $("sub").textContent=`${picker} picked ${s.label}: ${fmt(yc,s)} vs ${fmt(ac,s)}`;
+  log(`${picker} picked ${s.label}. ${yc.name} ${fmt(yc,s)} vs ${ac.name} ${fmt(ac,s)}: ${outcome==="draw"?"draw":(outcome==="you"?"you win":"AI wins")}.`);
+  renderReveal(yc,ac);
+  if(!G.you.length||!G.ai.length)endGame();
+  else $("next").focus({preventScroll:true});
+}
+
+function renderReveal(yc,ac){
+  const res=G.result;
+  $("youCard").innerHTML=cardHTML(yc,false,{key:res.key,cls:res.you});
+  $("aiCard").innerHTML=cardHTML(ac,false,{key:res.key,cls:res.ai})+`<div class="back"><b>Ferry Lab</b></div>`;
+  $("aiCard").classList.add("revealed");
+  const total=DECK.length;
+  $("youCount").textContent=`${G.you.length} cards`; $("aiCount").textContent=`${G.ai.length} cards`;
+  $("youBar").style.width=(G.you.length/total*100)+"%"; $("aiBar").style.width=(G.ai.length/total*100)+"%";
+  $("pot").textContent=G.pot.length?`${G.pot.length} cards in the middle`:"";
+  $("next").hidden=!G.you.length||!G.ai.length;
+}
+
+function nextRound(){
+  G.round++; G.phase="choose"; G.result=null; render();
+  if(G.turn==="ai"){
+    $("msg").className="msg";$("msg").textContent="AI Skipper's turn";$("sub").textContent="Choosing a stat…";
+    const ac=DECK[G.ai[0]];
+    setTimeout(()=>{if(G.phase==="choose"&&G.turn==="ai")play(aiChoose(ac),"ai")},1100);
+  }
+}
+
+function endGame(){
+  const youWon=G.you.length>0;
+  const m=$("msg"); m.className="msg "+(youWon?"good":"bad");
+  m.textContent=youWon?"You win the fleet!":"AI Skipper wins";
+  $("sub").textContent=`Game over after ${G.round} rounds. Press New game to play again.`;
+  $("next").hidden=true;
+  log(youWon?"You hold all 36 ships. Well sailed.":"The AI Skipper holds all 36 ships.");
+}
+
+function log(t){const li=document.createElement("li");li.innerHTML=`<span class="r">R${G?G.round:1}</span><span></span>`;li.lastChild.textContent=t;$("log").prepend(li)}
+
+$("next").onclick=nextRound;
+$("restart").onclick=newGame;
+newGame();
+</script>
+
+</body></html>

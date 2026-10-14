@@ -1,0 +1,457 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<style>
+.fl-nav{--fln-bg:#0f2430;--fln-fg:#edf2f1;--fln-mute:#9db6bd;--fln-hot:#ff7443;background:var(--fln-bg);color:var(--fln-fg);font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fl-nav{--fln-bg:#050e13}}
+:root[data-theme="dark"] .fl-nav{--fln-bg:#050e13}
+.fl-nav ol{max-width:1180px;margin:0 auto;padding:10px 0;list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.fl-nav li{display:flex;align-items:center;gap:10px}
+.fl-nav li+li::before{content:"›";color:var(--fln-mute)}
+.fl-nav a{color:var(--fln-fg);text-decoration:none;border-bottom:2px solid transparent;padding:4px 0}
+.fl-nav a:hover{border-bottom-color:var(--fln-hot)}
+.fl-nav a:focus-visible{outline:3px solid var(--fln-hot);outline-offset:3px}
+.fl-nav .fl-home{font-family:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;font-weight:800;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.fl-nav [aria-current]{color:var(--fln-mute)}
+</style><nav class="fl-nav" aria-label="Site"><ol><li><a class="fl-home" href="../../index.html">UK Ferry Lab</a></li><li><a href="../../lab/index.html">Ferry Lab</a></li><li><a href="../index.html">Games</a></li><li><span aria-current="page">Cargo Game</span></li></ol></nav>
+<title>Load the Ferry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: ship views across the top (side + stern), car deck plan below; right column holds the Plimsoll close-up, readouts and the harbour master's mission. Tokens match the Ferry Lab route finder. */
+:root{
+  --paper:#edf2f1; --card:#f9fbfb; --ink:#0f2430; --muted:#4b6571; --line:#c9d7d7;
+  --signal:#d9481a; --signal-ink:#ffffff; --sea:#145565;
+  --sky:#e3eeef; --seawater:#2f7f92; --riverwater:#8a6a3c;
+  --hull:#1d3542; --mark:#f3efe2; --antifoul:#b2402f; --super:#f7f5ef; --window:#3d5a66;
+  --steel:#c4d2d3; --lane:#8fa6aa;
+  --car:#2f7f92; --van:#a8700a; --camper:#5f8a30; --coach:#7b4fa0; --lorry:#d9481a; --veh-ink:#ffffff;
+  --ok:#2e7d4f; --warn:#b7791f; --bad:#c62828; --chip-ink:#ffffff;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0;
+  --sky:#0f222b; --seawater:#2b7385; --riverwater:#7a5d34;
+  --hull:#2a4654; --mark:#f3efe2; --antifoul:#c4553f; --super:#d9e2e2; --window:#25404b;
+  --steel:#1c343e; --lane:#3f5f69;
+  --car:#3b97ab; --van:#c08a1e; --camper:#73a33d; --coach:#9467bb; --lorry:#e5602f; --veh-ink:#ffffff;
+  --ok:#3f9e66; --warn:#c98f2c; --bad:#e24c4c; --chip-ink:#0b1820; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0;
+  --sky:#0f222b; --seawater:#2b7385; --riverwater:#7a5d34;
+  --hull:#2a4654; --mark:#f3efe2; --antifoul:#c4553f; --super:#d9e2e2; --window:#25404b;
+  --steel:#1c343e; --lane:#3f5f69;
+  --car:#3b97ab; --van:#c08a1e; --camper:#73a33d; --coach:#9467bb; --lorry:#e5602f; --veh-ink:#ffffff;
+  --ok:#3f9e66; --warn:#c98f2c; --bad:#e24c4c; --chip-ink:#0b1820; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 24px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sea)}
+.eyebrow a{color:inherit}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(42px,8vw,80px);line-height:.9;margin:4px 0 0;text-transform:uppercase;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:50ch}
+
+.layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+.stage,.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+.views{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1.15fr);gap:12px}
+@media (max-width:560px){.views{grid-template-columns:1fr}}
+.viewcard{position:relative;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--sky)}
+.viewcard svg{display:block;width:100%;height:auto}
+.viewlabel{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.panel h3{font-family:var(--display);font-weight:800;font-size:32px;line-height:1;margin:0;text-transform:uppercase;text-wrap:balance}
+.panel p{margin:0;max-width:62ch}
+.muted{color:var(--muted)}
+
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.tool{display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 9px;cursor:pointer;font:700 15px var(--body);text-align:left}
+.tool small{display:block;font:500 12px var(--mono);color:var(--muted)}
+.tool .sw{flex:0 0 auto;width:14px;height:22px;border-radius:3px;background:var(--c)}
+.tool[aria-pressed="true"]{border-color:var(--signal);box-shadow:inset 0 0 0 1px var(--signal)}
+.tool.erase .sw{background:transparent;border:2px dashed var(--muted)}
+button:focus-visible,select:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+
+.deckhead{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.deckscroll{overflow-x:auto}
+.deck{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(4,48px);gap:4px;background:var(--steel);padding:8px 30px 8px 8px;min-width:340px;
+  clip-path:polygon(0 0,calc(100% - 30px) 0,100% 50%,calc(100% - 30px) 100%,0 100%);
+  background-image:repeating-linear-gradient(90deg,transparent 0 10px,color-mix(in srgb,var(--lane) 18%,transparent) 10px 11px)}
+.slot{border:1px dashed var(--lane);background:transparent;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:0;padding:0}
+.slot:hover{background:color-mix(in srgb,var(--signal) 12%,transparent)}
+.veh{position:relative;height:72%;width:calc(var(--w) * 100%);border-radius:3px;background:var(--c);color:var(--veh-ink);font:500 11px var(--mono);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.veh::after{content:"";position:absolute;right:2px;top:14%;bottom:14%;width:5px;border-radius:2px;background:rgba(255,255,255,.55)}
+.veh.lorry::before{content:"";position:absolute;right:8px;top:0;bottom:0;width:2px;background:var(--steel)}
+.deckfoot{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted)}
+
+.marks{border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:var(--hull)}
+.marks svg{display:block;width:100%;height:auto}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{font-weight:700;font-size:14px;padding:3px 11px;border-radius:99px;color:var(--chip-ink);background:var(--ok)}
+.chip.warn{background:var(--warn)}
+.chip.bad{background:var(--bad)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:0}
+.facts div{border-top:1px solid var(--line);padding-top:8px;min-width:0}
+.facts dt{font-size:13px;color:var(--muted)}
+.facts dd{margin:0;font-weight:700;font-variant-numeric:tabular-nums}
+.big{font-family:var(--display);font-weight:800;font-size:28px;line-height:1}
+
+.seg{display:flex;border:2px solid var(--ink);border-radius:6px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--card);color:var(--ink);font:700 15px var(--body);padding:8px 6px;cursor:pointer}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.seg button:disabled{cursor:not-allowed;opacity:.55}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ctl label,.ctl .lbl{font-size:13px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:700 15px var(--body);border-radius:6px;cursor:pointer;color:var(--ink);padding:8px 12px;border:2px solid var(--ink);background:var(--card)}
+.btn.go{background:var(--signal);border-color:var(--signal);color:var(--signal-ink);font-size:18px;padding:10px 18px}
+select{font:700 16px var(--body);color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:8px}
+.req{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-variant-numeric:tabular-nums}
+.req li::before{content:"○ ";color:var(--muted)}
+.req li.met::before{content:"● ";color:var(--ok)}
+.result{border-left:5px solid var(--muted);padding:4px 0 4px 12px;display:flex;flex-direction:column;gap:6px}
+.result.good{border-color:var(--ok)}
+.result.fail{border-color:var(--bad)}
+.result strong{font-size:19px}
+.result ul{margin:0;padding-left:20px}
+.how p+p{margin-top:2px}
+footer{border-top:1px solid var(--line);padding-top:14px;font-size:14px;color:var(--muted);max-width:80ch}
+footer p{margin:0 0 6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow"><a href="https://claude.ai/code/artifact/5e2bd693-65cb-4ea2-a271-223a2db5a201">Ferry Lab</a> · Buoyancy</div>
+    <h1>Load the<br>Ferry</h1>
+  </div>
+  <p class="lede">You are the loading officer on MV Puffin Lass. Pick a vehicle and tap a space on the car deck. Watch her sink lower in the water and lean if the load is lopsided. Keep her above the Plimsoll mark, then ask to sail.</p>
+</header>
+
+<div class="layout">
+  <section class="stage" aria-label="The ship">
+    <div class="views">
+      <div class="viewcard"><span class="viewlabel">Side view</span><svg id="side" viewBox="0 0 680 250" role="img" aria-label="Side view of the ferry floating in the water"></svg></div>
+      <div class="viewcard"><span class="viewlabel">From behind</span><svg id="stern" viewBox="0 0 240 250" role="img" aria-label="View from behind the ferry showing how much it leans"></svg></div>
+    </div>
+
+    <div class="panel">
+      <h2>1 · Pick a vehicle</h2>
+      <div class="tools" id="tools" role="group" aria-label="Vehicles"></div>
+      <h2>2 · Tap the car deck</h2>
+      <div class="deckhead"><span>Stern · ramp ↓</span><span>Port side (left)</span><span>Bow →</span></div>
+      <div class="deckscroll"><div class="deck" id="deck" role="grid" aria-label="Car deck, 4 lanes of 8 spaces"></div></div>
+      <div class="deckhead"><span></span><span>Starboard side (right)</span><span></span></div>
+      <div class="deckfoot"><span id="counts"></span><button type="button" class="btn" id="unload">Unload everything</button></div>
+    </div>
+
+    <div class="panel how">
+      <h2>Why does a ship float?</h2>
+      <p>A ship pushes water out of the way. The water pushes back up. She sinks until the water she has pushed aside weighs the same as she does. That is Archimedes' principle.</p>
+      <p>Every lorry you load makes her heavier, so she sinks a little deeper until she has pushed aside 44 more tonnes of water. Puffin Lass sinks about 1 cm for every 15 tonnes.</p>
+      <p>Sea water has salt in it, so a bucket of it is heavier than a bucket of river water. A ship floats higher in the sea. That is why the Plimsoll mark has an extra F line for fresh water.</p>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel">
+      <h2>Plimsoll mark, close up</h2>
+      <div class="marks"><svg id="marks" viewBox="0 0 350 332" role="img" aria-label="Close-up of the load line marks on the side of the ship"></svg></div>
+      <div class="status" aria-live="polite"><span class="chip" id="chip">Safe</span><span id="statusText" class="muted"></span></div>
+      <dl class="facts">
+        <div><dt>Cargo on board</dt><dd class="big" id="fCargo"></dd></div>
+        <div><dt>Ship plus cargo</dt><dd class="big" id="fDisp"></dd></div>
+        <div><dt>Depth in the water</dt><dd id="fDraught"></dd></div>
+        <div><dt>Room left</dt><dd id="fRoom"></dd></div>
+        <div><dt>Lean</dt><dd id="fHeel"></dd></div>
+        <div><dt>Nose up or down</dt><dd id="fTrim"></dd></div>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Where and when</h2>
+      <div class="ctl"><span class="lbl">Loading in</span>
+        <div class="seg" id="water"><button type="button" data-v="sea">Sea water</button><button type="button" data-v="river">River water</button></div></div>
+      <div class="ctl"><span class="lbl">Season</span>
+        <div class="seg" id="season"><button type="button" data-v="summer">Summer</button><button type="button" data-v="winter">Winter</button></div></div>
+      <div class="ctl"><span class="lbl">Anti-heel tanks: pump water from side to side to stop her leaning</span>
+        <div class="row"><button type="button" class="btn" id="balance">Balance with tanks</button><button type="button" class="btn" id="resetTanks">Even the tanks</button></div>
+        <span class="muted" id="tankText" style="font-size:14px"></span></div>
+    </section>
+
+    <section class="panel">
+      <h2>Harbour master's job sheet</h2>
+      <select id="mission" aria-label="Choose a job"></select>
+      <h3 id="mTitle"></h3>
+      <p id="mText"></p>
+      <ul class="req" id="mReq"></ul>
+      <div class="row"><button type="button" class="btn go" id="sail">Ask to sail</button></div>
+      <div id="result" aria-live="polite"></div>
+    </section>
+  </aside>
+</div>
+
+<footer>
+  <p>MV Puffin Lass is made up. She is 120 m long and 22 m wide, and weighs 4,200 tonnes empty, including 200 tonnes of water in her anti-heel tanks. Vehicle weights are typical loaded weights; 44 tonnes is the most a six-axle lorry may weigh on UK roads.</p>
+  <p>The close-up follows the shape set by the international load line rules: a ring 300 mm across with a line through it at the summer mark, lines 25 mm thick, and the marks for tropical (T), summer (S), winter (W), fresh water (F) and tropical fresh water (TF). The letters L R stand for the society that checked the marks. Ships longer than 100.5 m have no WNA (winter North Atlantic) line. The side views are drawn taller than life so you can see the ship move.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+const A=1450, LIGHT=4200, GM=1.6, LEN=120;
+const RHO={sea:1.025,river:1.000};
+const S=3.5, W=S-S/48, T=S+S/48, FWA=S/40, F=S+FWA, TF=T+FWA;
+const TYPES={
+  car:{name:"Car",m:1.5,w:.4,ab:"C"},
+  van:{name:"Van",m:3.5,w:.52,ab:"V"},
+  camper:{name:"Campervan",m:5,w:.62,ab:"CV"},
+  coach:{name:"Coach",m:18,w:.9,ab:"18"},
+  lorry:{name:"Lorry",m:44,w:1,ab:"44"}
+};
+const COLS=8, ROWS=4;
+const laneY=[-7.5,-2.5,2.5,7.5];
+const slotX=c=>-43.75+c*12.5;
+const MISSIONS={
+  free:{title:"Free loading",text:"Load whatever you like, then ask to sail and see what the harbour master says.",req:{}},
+  friday:{title:"Friday freight",text:"Eighteen lorries need to cross to Zeebrugge tonight. Get them all on without the ship leaning.",req:{lorry:18},water:"sea",season:"summer"},
+  holiday:{title:"Summer holidays",text:"Families are off on holiday: two coaches, six campervans and fourteen cars.",req:{coach:2,camper:6,car:14},water:"sea",season:"summer"},
+  winter:{title:"Winter storms",text:"In winter the North Sea is rougher, so the ship must float higher, at her W mark. Can you still fit twenty lorries?",req:{lorry:20},water:"sea",season:"winter"},
+  river:{title:"River berth",text:"You are loading at a quay up a river, where the water is fresh. Load twenty-two lorries. Which mark are you allowed to reach?",req:{lorry:22},water:"river",season:"summer"},
+  max:{title:"Heaviest safe load",text:"Load at least 990 tonnes of cargo and still be safe to sail. You will need to think about where every lorry goes.",req:{},minCargo:990,water:"sea",season:"summer"}
+};
+
+let state={deck:Array(COLS*ROWS).fill(null),tool:"lorry",water:"sea",season:"summer",tank:0,mission:"free",done:{}};
+const $=id=>document.getElementById(id);
+const el=(tag,attrs,parent)=>{const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e};
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmt=(n,d=0)=>n.toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+function calc(){
+  let cargo=0,mx=0,my=0;const count={car:0,van:0,camper:0,coach:0,lorry:0};
+  state.deck.forEach((t,i)=>{if(!t)return;const m=TYPES[t].m;cargo+=m;count[t]++;mx+=m*slotX(i%COLS);my+=m*laneY[Math.floor(i/COLS)]});
+  const delta=LIGHT+cargo, rho=RHO[state.water];
+  const dr=delta/(rho*A);
+  const My=my+state.tank*20;
+  const heel=Math.atan(My/(delta*GM))*180/Math.PI;
+  const trim=LEN*mx/(delta*LEN); // metres, + = down by the bow
+  const base=state.season==="winter"?W:S;
+  const limit=base+(state.water==="river"?FWA:0);
+  const markName=state.water==="river"?(state.season==="winter"?"W + fresh allowance":"F"):(state.season==="winter"?"W":"S");
+  const room=(limit-dr)*rho*A;
+  return {cargo,count,delta,dr,heel,trim,limit,markName,room,my,rho};
+}
+function problems(c){
+  const p=[];
+  if(c.dr>c.limit+1e-9)p.push({k:"over",msg:`Too heavy. She is ${fmt((c.dr-c.limit)*100,1)} cm below her ${c.markName} mark. Take off about ${fmt(Math.ceil(-c.room))} tonnes.`});
+  if(Math.abs(c.heel)>2)p.push({k:"heel",msg:`She is leaning ${fmt(Math.abs(c.heel),1)}° to ${c.heel>0?"starboard (right)":"port (left)"}. Move heavy vehicles to the other side, or balance with the tanks.`});
+  if(Math.abs(c.trim)>1)p.push({k:"trim",msg:`Her ${c.trim>0?"nose is":"back end is"} ${fmt(Math.abs(c.trim),2)} m too low. Spread the heavy vehicles along the deck.`});
+  return p;
+}
+
+/* ---------- tools & deck ---------- */
+const tools=$("tools");
+Object.entries(TYPES).forEach(([k,t])=>{
+  const b=document.createElement("button");b.type="button";b.className="tool";b.dataset.t=k;b.style.setProperty("--c",`var(--${k})`);
+  b.innerHTML=`<span class="sw"></span><span>${t.name}<small>${fmt(t.m,t.m%1?1:0)} t</small></span>`;
+  b.onclick=()=>{state.tool=k;render()};tools.appendChild(b);
+});
+{const b=document.createElement("button");b.type="button";b.className="tool erase";b.dataset.t="erase";b.innerHTML=`<span class="sw"></span><span>Remove<small>tap to clear</small></span>`;b.onclick=()=>{state.tool="erase";render()};tools.appendChild(b)}
+
+const deck=$("deck");
+for(let i=0;i<COLS*ROWS;i++){
+  const b=document.createElement("button");b.type="button";b.className="slot";b.dataset.i=i;
+  b.onclick=()=>{const cur=state.deck[i];
+    if(state.tool==="erase"||cur===state.tool)state.deck[i]=null;else state.deck[i]=state.tool;
+    clearResult();render()};
+  deck.appendChild(b);
+}
+$("unload").onclick=()=>{state.deck.fill(null);state.tank=0;clearResult();render()};
+
+function segBind(id,key){$(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{state[key]=b.dataset.v;clearResult();render()})}
+segBind("water","water");segBind("season","season");
+$("balance").onclick=()=>{const c=calc();state.tank=Math.max(-100,Math.min(100,Math.round(-c.my/20*2)/2));clearResult();render()};
+$("resetTanks").onclick=()=>{state.tank=0;clearResult();render()};
+
+const msel=$("mission");
+Object.entries(MISSIONS).forEach(([k,m])=>{const o=document.createElement("option");o.value=k;o.textContent=m.title;msel.appendChild(o)});
+msel.onchange=()=>{state.mission=msel.value;const m=MISSIONS[state.mission];if(m.water)state.water=m.water;if(m.season)state.season=m.season;clearResult();render()};
+
+/* ---------- side view ---------- */
+const KH=4.6,KV=10,SEA_Y=168,CX=330;
+const side=$("side");
+const sP=(x,z)=>`${(x*KH).toFixed(1)},${(-z*KV).toFixed(1)}`;
+const sideShip=el("g",{},side);
+const sideInner=el("g",{},sideShip);
+const sDefs=el("defs",{},side);
+const hullD=`M${sP(-60,10)} L${sP(-60,2.2)} L${sP(-56,0)} L${sP(46,0)} Q${sP(58,0)} ${sP(63,10.6)} L${sP(63,11)} L${sP(-60,11)} Z`;
+const cp=el("clipPath",{id:"hullclip"},sDefs);el("path",{d:hullD},cp);
+el("path",{d:hullD,fill:"var(--hull)"},sideInner);
+el("rect",{x:-60*KH,y:-3.2*KV,width:125*KH,height:3.2*KV,fill:"var(--antifoul)","clip-path":"url(#hullclip)"},sideInner);
+el("path",{d:`M${sP(-44,11)} L${sP(28,11)} L${sP(36,15)} L${sP(34,20)} L${sP(-40,20)} L${sP(-44,17)} Z`,fill:"var(--super)",stroke:"var(--ink)","stroke-width":1},sideInner);
+for(let x=-40;x<26;x+=3.2)el("rect",{x:x*KH,y:-14.4*KV,width:9,height:5,rx:1,fill:"var(--window)"},sideInner);
+for(let x=-38;x<30;x+=4.5)el("rect",{x:x*KH,y:-18.2*KV,width:14,height:6,rx:1,fill:"var(--window)"},sideInner);
+el("rect",{x:-30*KH,y:-25*KV,width:8*KH,height:5*KV,fill:"var(--super)",stroke:"var(--ink)","stroke-width":1},sideInner);
+el("rect",{x:-30*KH,y:-25*KV,width:8*KH,height:1.6*KV,fill:"var(--signal)"},sideInner);
+el("line",{x1:22*KH,y1:-20*KV,x2:22*KH,y2:-24*KV,stroke:"var(--ink)","stroke-width":2},sideInner);
+const nameT=el("text",{x:30*KH,y:-6.2*KV,fill:"var(--mark)","font-family":"var(--mono)","font-size":11,"letter-spacing":"2"},sideInner);nameT.textContent="PUFFIN LASS";
+el("circle",{cx:0,cy:-S*KV,r:4,fill:"none",stroke:"var(--mark)","stroke-width":1.4},sideInner);
+el("line",{x1:-7,y1:-S*KV,x2:7,y2:-S*KV,stroke:"var(--mark)","stroke-width":1.4},sideInner);
+const sideSea=el("path",{opacity:.82},side);
+const sideLabel=el("text",{x:16,y:240,fill:"var(--mark)","font-family":"var(--mono)","font-size":12},side);
+
+/* ---------- stern view ---------- */
+const KS=6,ST_Y=158,ST_X=120;
+const stern=$("stern");
+const tP=(x,z)=>`${(x*KS).toFixed(1)},${(-z*KS).toFixed(1)}`;
+const sternShip=el("g",{},stern);
+const sternInner=el("g",{},sternShip);
+const tDefs=el("defs",{},stern);
+const secD=`M${tP(-11,11)} L${tP(-11,2)} Q${tP(-11,0)} ${tP(-9,0)} L${tP(9,0)} Q${tP(11,0)} ${tP(11,2)} L${tP(11,11)} Z`;
+const cp2=el("clipPath",{id:"secclip"},tDefs);el("path",{d:secD},cp2);
+el("path",{d:secD,fill:"var(--hull)"},sternInner);
+el("rect",{x:-11*KS,y:-3.2*KS,width:22*KS,height:3.2*KS,fill:"var(--antifoul)","clip-path":"url(#secclip)"},sternInner);
+el("rect",{x:-9*KS,y:-20*KS,width:18*KS,height:9*KS,fill:"var(--super)",stroke:"var(--ink)","stroke-width":1},sternInner);
+for(let x=-7.5;x<7;x+=3)el("rect",{x:x*KS,y:-17*KS,width:10,height:6,rx:1,fill:"var(--window)"},sternInner);
+el("rect",{x:-2*KS,y:-25*KS,width:4*KS,height:5*KS,fill:"var(--super)",stroke:"var(--ink)","stroke-width":1},sternInner);
+el("rect",{x:-2*KS,y:-25*KS,width:4*KS,height:1.6*KS,fill:"var(--signal)"},sternInner);
+const tanks={};
+[["p",-10.3],["s",7.3]].forEach(([k,x])=>{
+  el("rect",{x:x*KS,y:-4.6*KS,width:3*KS,height:4*KS,fill:"var(--hull)",stroke:"var(--mark)","stroke-width":1.2},sternInner);
+  tanks[k]=el("rect",{x:x*KS+1.5,width:3*KS-3,fill:"var(--seawater)"},sternInner);
+  const lt=el("text",{x:(x+1.5)*KS,y:-5.4*KS,"text-anchor":"middle",fill:"var(--mark)","font-family":"var(--mono)","font-size":10},sternInner);lt.textContent=k==="p"?"P":"S";
+});
+const sternSea=el("path",{opacity:.82},stern);
+const sternLabel=el("text",{x:120,y:240,"text-anchor":"middle",fill:"var(--mark)","font-family":"var(--mono)","font-size":12},stern);
+
+/* ---------- Plimsoll close-up ---------- */
+const marks=$("marks");
+const K=280,TOP_D=3.90,BOT_D=2.80;
+const yD=d=>12+(TOP_D-d)*K;
+el("rect",{x:0,y:0,width:350,height:332,fill:"var(--hull)"},marks);
+for(let i=0;i<=11;i++){const d=BOT_D+i*0.1, y=yD(d);
+  el("line",{x1:0,x2:i%2===0?16:9,y1:y,y2:y,stroke:"var(--mark)","stroke-width":1.2,opacity:.75},marks);
+  if(i%2===0){const t=el("text",{x:20,y:y+4,fill:"var(--mark)","font-family":"var(--mono)","font-size":11,opacity:.75},marks);t.textContent=d.toFixed(1)+" m"}}
+const MW=7, cx=118, cyS=yD(S);
+el("circle",{cx,cy:cyS,r:42-MW/2,fill:"none",stroke:"var(--mark)","stroke-width":MW},marks);
+el("rect",{x:cx-63,y:cyS,width:126,height:MW,fill:"var(--mark)"},marks);
+[["L",-50],["R",50]].forEach(([l,dx])=>{const t=el("text",{x:cx+dx,y:cyS-10,"text-anchor":"middle",fill:"var(--mark)","font-family":"var(--display)","font-weight":800,"font-size":24},marks);t.textContent=l});
+const vx=cx+151;
+el("rect",{x:vx,y:yD(TF),width:MW,height:yD(W)-yD(TF)+MW,fill:"var(--mark)"},marks);
+[["T",T,1],["S",S,1],["W",W,1],["F",F,-1],["TF",TF,-1]].forEach(([l,d,dir])=>{
+  const y=yD(d);
+  el("rect",{x:dir>0?vx:vx-64+MW,y,width:64,height:MW,fill:"var(--mark)"},marks);
+  const t=el("text",{x:dir>0?vx+68:vx-62,y:y+MW+1,"text-anchor":dir>0?"start":"end",fill:"var(--mark)","font-family":"var(--display)","font-weight":800,"font-size":17},marks);t.textContent=l;
+});
+const limitLine=el("line",{x1:0,x2:350,stroke:"var(--signal)","stroke-width":2,"stroke-dasharray":"6 5"},marks);
+const limitTxt=el("text",{x:346,"text-anchor":"end",fill:"var(--signal)","font-family":"var(--mono)","font-size":11},marks);
+const markWater=el("path",{opacity:.85},marks);
+const markWL=el("text",{x:40,fill:"var(--mark)","font-family":"var(--mono)","font-size":13,"font-weight":500},marks);
+
+/* ---------- render ---------- */
+let cur=null,tgt=null,phase=0,sailX=0,sailing=false;
+function render(){
+  const c=calc();
+  tgt={dr:c.dr,heel:c.heel,trim:c.trim};
+  if(!cur||reduce)cur={...tgt};
+  tools.querySelectorAll(".tool").forEach(b=>b.setAttribute("aria-pressed",b.dataset.t===state.tool));
+  deck.querySelectorAll(".slot").forEach((b,i)=>{const t=state.deck[i];
+    const lane=["port outer","port inner","starboard inner","starboard outer"][Math.floor(i/COLS)];
+    b.setAttribute("aria-label",`Space ${i%COLS+1}, ${lane} lane: ${t?TYPES[t].name:"empty"}`);
+    b.innerHTML=t?`<span class="veh ${t}" style="--c:var(--${t});--w:${TYPES[t].w}">${TYPES[t].w>.55?TYPES[t].ab:""}</span>`:""});
+  $("counts").textContent=Object.entries(c.count).filter(([,n])=>n).map(([k,n])=>`${n} ${TYPES[k].name.toLowerCase()}${n>1?(k==="coach"?"es":"s"):""}`).join(" · ")||"The car deck is empty.";
+  const m=MISSIONS[state.mission];
+  [["water",state.water],["season",state.season]].forEach(([id,v])=>$(id).querySelectorAll("button").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.v===v);b.disabled=!!m[id]&&b.dataset.v!==v}));
+  // readouts
+  $("fCargo").textContent=`${fmt(c.cargo,c.cargo%1?1:0)} t`;
+  $("fDisp").textContent=`${fmt(c.delta,c.delta%1?1:0)} t`;
+  $("fDraught").textContent=`${c.dr.toFixed(3)} m (limit ${c.limit.toFixed(3)} m, ${c.markName} mark)`;
+  $("fRoom").textContent=c.room>=0?`${fmt((c.limit-c.dr)*100,1)} cm · about ${fmt(Math.floor(c.room))} t more`:`None: ${fmt(-c.room,0)} t too much`;
+  $("fHeel").textContent=Math.abs(c.heel)<0.05?"Upright":`${fmt(Math.abs(c.heel),1)}° to ${c.heel>0?"starboard":"port"}`;
+  $("fTrim").textContent=Math.abs(c.trim)<0.01?"Level":`${fmt(Math.abs(c.trim),2)} m ${c.trim>0?"down at the bow":"down at the stern"}`;
+  $("tankText").textContent=state.tank===0?"Both tanks hold 100 t of water.":`Port tank ${fmt(100-state.tank,1)} t, starboard tank ${fmt(100+state.tank,1)} t.`;
+  const p=problems(c), chip=$("chip");
+  chip.className="chip"+(p.some(x=>x.k==="over")||Math.abs(c.heel)>8?" bad":p.length?" warn":"");
+  chip.textContent=p.length?(p.some(x=>x.k==="over")?"Overloaded":p[0].k==="heel"?"Leaning":"Out of trim"):"Safe";
+  $("statusText").textContent=p.length?p.map(x=>x.msg.split(".")[0]).join(". ")+".":"Ready for sea if the job sheet is done.";
+  // mission
+  $("mTitle").textContent=m.title;$("mText").textContent=m.text;
+  const ul=$("mReq");ul.innerHTML="";
+  Object.entries(m.req).forEach(([k,n])=>{const li=document.createElement("li");const have=c.count[k];li.className=have>=n?"met":"";li.textContent=`${TYPES[k].name}s: ${have} of ${n}`.replace("Coachs","Coaches");ul.appendChild(li)});
+  if(m.minCargo){const li=document.createElement("li");li.className=c.cargo>=m.minCargo?"met":"";li.textContent=`Cargo: ${fmt(c.cargo,1)} of ${m.minCargo} t`;ul.appendChild(li)}
+  {const li=document.createElement("li");li.className=p.length?"":"met";li.textContent="Safe: above the mark, upright and level";ul.appendChild(li)}
+  msel.value=state.mission;
+  for(const o of msel.options)o.textContent=MISSIONS[o.value].title+(state.done[o.value]?" ✓":"");
+  const water=state.water==="river"?"var(--riverwater)":"var(--seawater)";
+  [sideSea,sternSea,markWater,tanks.p,tanks.s].forEach(e=>e.setAttribute("fill",water));
+  sideLabel.textContent=state.water==="river"?"River water · 1.000 t per m³":"Sea water · 1.025 t per m³";
+  sternLabel.textContent=`Lean ${fmt(Math.abs(c.heel),1)}°`;
+  limitLine.setAttribute("y1",yD(c.limit));limitLine.setAttribute("y2",yD(c.limit));
+  limitTxt.setAttribute("y",yD(c.limit)-5);limitTxt.textContent=`limit · ${c.markName}`;
+}
+
+function wave(x0,x1,y,amp,len,bottom){let d=`M${x0},${bottom} L${x0},${y}`;for(let x=x0;x<=x1;x+=6)d+=` L${x},${(y+Math.sin((x/len)+phase)*amp).toFixed(1)}`;return d+` L${x1},${bottom} Z`}
+function frame(){
+  if(!reduce){for(const k in tgt)cur[k]+=(tgt[k]-cur[k])*0.12;phase+=0.035}
+  // side
+  const trimAng=Math.atan(cur.trim*KV/(LEN*KH))*180/Math.PI;
+  sideShip.setAttribute("transform",`translate(${CX+sailX},${SEA_Y+cur.dr*KV}) rotate(${trimAng.toFixed(3)} 0 ${(-cur.dr*KV).toFixed(1)})`);
+  sideSea.setAttribute("d",wave(0,680,SEA_Y,2,22,250));
+  // stern
+  const tp=100-state.tank, ts=100+state.tank;
+  [["p",-10.3,tp],["s",7.3,ts]].forEach(([k,x,w])=>{const h=(4*KS-3)*w/200;tanks[k].setAttribute("y",-0.6*KS-1.5-h);tanks[k].setAttribute("height",h)});
+  sternShip.setAttribute("transform",`translate(${ST_X},${ST_Y+cur.dr*KS}) rotate(${cur.heel.toFixed(3)} 0 ${(-cur.dr*KS).toFixed(1)})`);
+  sternSea.setAttribute("d",wave(0,240,ST_Y,2,16,250));
+  // close-up
+  const yw=Math.max(4,Math.min(328,yD(cur.dr)));
+  markWater.setAttribute("d",wave(0,350,yw,2.5,18,332));
+  markWL.setAttribute("y",Math.max(16,yw-7));markWL.textContent=`${cur.dr.toFixed(2)} m`;
+  requestAnimationFrame(frame);
+}
+
+/* ---------- sail ---------- */
+function clearResult(){$("result").innerHTML=""}
+$("sail").onclick=()=>{
+  const c=calc(),m=MISSIONS[state.mission],p=problems(c).map(x=>x.msg);
+  Object.entries(m.req).forEach(([k,n])=>{if(c.count[k]<n){const left=n-c.count[k];p.push(`Still waiting on the quay: ${left} ${TYPES[k].name.toLowerCase()}${left>1?(k==="coach"?"es":"s"):""}.`)}});
+  if(m.minCargo&&c.cargo<m.minCargo)p.push(`Only ${fmt(c.cargo,1)} t loaded. The target is ${m.minCargo} t.`);
+  const r=$("result");
+  if(p.length){r.innerHTML=`<div class="result fail"><strong>Harbour master says: not yet</strong><ul>${p.map(x=>`<li>${x}</li>`).join("")}</ul></div>`;return}
+  let extra="";
+  if(state.water==="river"){const seaDr=c.delta/(RHO.sea*A);extra=` When she reaches the salty sea she will rise about ${fmt((c.dr-seaDr)*100,1)} cm, to ${seaDr.toFixed(2)} m.`}
+  else if(c.cargo===0)extra=" Sailing empty earns no money, though.";
+  else extra=` She can carry about ${fmt(Math.floor(c.room))} t more.`;
+  state.done[state.mission]=true;
+  r.innerHTML=`<div class="result good"><strong>Cleared to sail</strong><p>${fmt(c.cargo,1)} t on board, ${((c.limit-c.dr)*100).toFixed(1)} cm above the ${c.markName} mark.${extra}</p></div>`;
+  render();
+  if(!reduce&&!sailing){sailing=true;const t0=performance.now();
+    const go=t=>{const k=(t-t0)/2600;sailX=k<1?Math.pow(k,2)*720:0;if(k<1)requestAnimationFrame(go);else{sailX=-720;const back=t2=>{sailX+=24;if(sailX<0)requestAnimationFrame(back);else{sailX=0;sailing=false}};requestAnimationFrame(back)}};
+    requestAnimationFrame(go)}
+};
+
+/* ---------- start ---------- */
+function start(data){
+  if(data&&data.deck)state=Object.assign(state,data);
+  else{ // example load so the page opens in a working state
+    [0,7,8,15,16,23,24,31].forEach(i=>state.deck[i]="lorry");
+    [2,5,26,29].forEach(i=>state.deck[i]="car");[11,20].forEach(i=>state.deck[i]="camper");
+    state.deck[12]="coach";
+  }
+  window.claude?.hot?.snapshot?.(()=>state);
+  render();requestAnimationFrame(frame);
+}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+})();
+</script>
+
+</body></html>

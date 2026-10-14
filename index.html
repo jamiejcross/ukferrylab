@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>UK Ferry Lab</title>
+<meta name="description" content="Explore Britain's ferries: a route map, a 3D wave simulator and three ferry games.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: the whole screen is a line drawing of the sea from a ferry deck, rows bunching toward the horizon; the title sits on it like a sign on the rail. Tokens shared with the Map, Wave Lab and games. */
+:root{
+  --deep:#0f2430; --foam:#f3f6f6; --mist:#a9c0c6; --line:#7fb3bf;
+  --signal:#d9481a; --signal-ink:#ffffff; --veil:rgba(15,36,48,.78); --veil-soft:rgba(8,20,26,0);
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--signal:#ff7443;--signal-ink:#1a0b05;color-scheme:dark}}
+:root[data-theme="dark"]{--signal:#ff7443;--signal-ink:#1a0b05;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--deep);color:var(--foam);font-family:var(--body);font-size:17px;line-height:1.45;overflow-x:hidden}
+.sea{position:fixed;inset:0;z-index:0;background:var(--deep)}
+.sea canvas{display:block;width:100%;height:100%}
+.veil{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(100deg,var(--veil) 0%,rgba(8,20,26,.45) 45%,var(--veil-soft) 80%),linear-gradient(0deg,rgba(8,20,26,.45),var(--veil-soft) 30%)}
+.page{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:24px;max-width:1180px;width:100%;margin:0 auto;padding-block:40px 24px}
+.coords{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mist);display:flex;flex-wrap:wrap;gap:6px 18px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.door{display:block;text-decoration:none;color:inherit;border:3px solid var(--foam);border-radius:6px;padding:clamp(18px,3vw,32px) clamp(20px,4vw,44px);
+  background:rgba(15,36,48,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);transition:background .2s,color .2s;max-width:100%}
+.door .name{display:block;font-family:var(--display);font-weight:900;text-transform:uppercase;font-size:clamp(56px,11vw,136px);line-height:.86;letter-spacing:.005em;text-shadow:0 2px 18px rgba(0,0,0,.35)}
+.door .go{display:inline-flex;align-items:center;gap:10px;margin-top:20px;background:var(--signal);color:var(--signal-ink);font-weight:700;font-size:18px;padding:10px 20px;border-radius:4px}
+.door .go svg{width:22px;height:22px;transition:transform .2s}
+.door:hover,.door:focus-visible{background:var(--foam);color:var(--deep)}
+.door:hover .name,.door:focus-visible .name{text-shadow:none}
+.door:hover .go svg,.door:focus-visible .go svg{transform:translateX(5px)}
+.door:focus-visible{outline:4px solid var(--signal);outline-offset:6px}
+.lede{margin:0;max-width:44ch;color:var(--foam);text-shadow:0 1px 4px rgba(0,0,0,.7)}
+footer{font-size:13px;color:var(--mist);padding-block:12px 16px;max-width:1180px;width:100%;margin:0 auto;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+@media (prefers-reduced-motion:reduce){.door,.door .go svg{transition:none}}
+</style>
+</head>
+<body>
+<div class="sea" id="sea" aria-hidden="true"><canvas id="gl"></canvas></div>
+<div class="veil" aria-hidden="true"></div>
+<div class="page">
+<main>
+  <div class="coords"><span>Hebrides</span><span>Northern Isles</span><span>North Sea</span><span>Firth of Forth</span></div>
+  <a class="door" href="lab/index.html">
+    <span class="name">UK Ferry<br>Lab</span>
+    <span class="go">Enter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span>
+  </a>
+  <p class="lede">Find a ferry route, steer a ship through a storm, and play ferry games.</p>
+</main>
+<footer>Waves drawn from a photo of a windy sea taken on a ferry crossing. Not made by or connected with any ferry company.</footer>
+</div>
+<script>
+(function(){
+"use strict";
+/* Line drawing of a wind-blown sea seen from a ferry deck, drawn from a photo of the Minch.
+   Rows of water are projected in perspective (far rows bunch up near the top), lifted by
+   swell rolling toward you, with whitecaps where crests run high and foam streaks along the wind. */
+const cv=document.getElementById("gl"),ctx=cv.getContext("2d");
+const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let W=0,H=0,dpr=1,F=1,HY=0;
+const CAM=6, ZN=3.2, ZF=150;
+const WAVES=[[0.04,0.50,0.42,0.4],[-0.22,0.78,0.24,2.1],[0.30,1.05,0.15,4.0],[-0.12,1.70,0.08,1.2],[0.55,2.40,0.05,5.3],[0.9,3.2,0.03,0.7],[-1.3,4.1,0.02,3.3],[1.8,5.5,0.012,2.2],[-2.4,7.3,0.008,4.6]]
+  .map(([kx,kz,a,p])=>({kx,kz,a,p,w:Math.sqrt(9.81*Math.hypot(kx,kz))*0.55}));
+const AMAX=WAVES.reduce((s,w)=>s+w.a,0);
+function h(x,z,t){let s=0;for(const v of WAVES)s+=v.a*Math.sin(v.kx*x+v.kz*z+v.w*t+v.p);return s}
+// smooth value noise for patchy whitecaps
+function hash(i,j){let n=i*374761393+j*668265263;n=(n^(n>>13))*1274126177;return ((n^(n>>16))>>>0)/4294967295}
+function noise(x,y){const i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+  const a=hash(i,j),b=hash(i+1,j),c=hash(i,j+1),d=hash(i+1,j+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const sy=(z,hh)=>HY+F*(CAM-hh)/z;
+const sx=(x,z)=>W/2+F*x/z;
+let streaks=[];
+function seed(){
+  streaks=[];
+  for(let i=0;i<260;i++)streaks.push(newStreak(ZN+Math.random()*(45-ZN)));
+}
+function newStreak(z){return{z,x:(Math.random()-.5)*z*W/F*1.2,len:0.3+Math.random()*0.9,drift:0.6+Math.random()*0.6,lean:0.25+Math.random()*0.25,seed:Math.random()*6,gap:Math.random()<.5}}
+function size(){
+  dpr=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
+  HY=H*0.07; F=(H*1.04-HY)*ZN/CAM;
+  seed();
+}
+let last=0;
+function draw(t){
+  const dt=Math.min(.05,t-last);last=t;
+  const ink=css("--line"),cap=css("--foam"),ground=css("--deep");
+  ctx.fillStyle=ground;ctx.fillRect(0,0,W,H);
+  // headland on the far horizon, as in the photo
+  ctx.strokeStyle=ink;ctx.globalAlpha=.35;ctx.lineWidth=1;ctx.beginPath();
+  for(let x=W*0.70;x<=W+4;x+=6){const u=(x-W*0.70)/(W*0.30);ctx.lineTo(x,HY-2-Math.pow(u,.7)*H*0.035-Math.sin(u*9)*1.5)}
+  ctx.stroke();
+  ctx.globalAlpha=.5;ctx.beginPath();ctx.moveTo(0,HY);ctx.lineTo(W,HY);ctx.stroke();
+  // rows of water, far to near
+  const N=Math.round(Math.min(110,Math.max(56,H/8)));
+  const step=Math.max(6,W/220);
+  for(let r=N-1;r>=0;r--){
+    const z=ZN*Math.pow(ZF/ZN,r/(N-1));
+    const near=1-r/(N-1);
+    ctx.globalAlpha=0.16+0.38*near;
+    ctx.lineWidth=0.6+1.1*near;
+    ctx.strokeStyle=ink;
+    const caps=[];
+    ctx.beginPath();
+    for(let X=-step;X<=W+step;X+=step){
+      const x=(X-W/2)*z/F, hh=h(x,z,t), y=sy(z,hh);
+      X<0?ctx.moveTo(X,y):ctx.lineTo(X,y);
+      const crest=(hh/AMAX-0.16)/0.35, n=noise(x*0.22+t*0.05,z*0.45-t*0.15);
+      if(crest>0&&n>0.5)caps.push([X,y,0.45+0.55*Math.min(1,crest*(n-0.5)/0.3)]);
+    }
+    ctx.stroke();
+    // whitecaps: brighter, slightly thicker strokes riding the crest
+    if(caps.length){
+      ctx.strokeStyle=cap;
+      for(let i=0;i<caps.length;i++){
+        const [X,y,k]=caps[i],nx=caps[i+1];
+        if(!nx||nx[0]-X>step*1.5)continue;
+        ctx.globalAlpha=Math.min(1,(0.5+0.5*near)*k+0.15);
+        ctx.lineWidth=(1.0+2.2*near)*k;
+        ctx.beginPath();ctx.moveTo(X,y-0.6*near);ctx.lineTo(nx[0],nx[1]-0.6*near);ctx.stroke();
+      }
+    }
+  }
+  // foam streaks lying along the wind, drifting toward you: short, broken and wiggly as in the photo
+  ctx.strokeStyle=cap;ctx.lineCap="round";
+  for(const s of streaks){
+    if(!still){s.z-=s.drift*dt*1.4;s.x+=s.lean*s.drift*dt*1.4;}
+    if(s.z<ZN+0.2){Object.assign(s,newStreak(30+Math.random()*15));}
+    const near=Math.max(0,1-Math.log(s.z/ZN)/Math.log(45/ZN));
+    const px=(14+46*near)*s.len;                      // length on screen
+    const dz=px*s.z*s.z/(F*CAM);                       // that length, back into the sea
+    const fade=Math.min(1,(s.z-ZN)/1.2,(45-s.z)/8);
+    ctx.globalAlpha=Math.max(0,(0.3+0.55*near)*fade);ctx.lineWidth=0.6+1.6*near;
+    ctx.beginPath();
+    const segs=6;
+    for(let i=0;i<=segs;i++){
+      const u=i/segs, z=s.z+dz*u, x=s.x-s.lean*dz*u+Math.sin(s.seed+u*7+t*0.8)*0.02*z;
+      const X=sx(x,z),Y=sy(z,h(x,z,t));
+      if(i===0||(i===3&&s.gap))ctx.moveTo(X,Y);else ctx.lineTo(X,Y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+}
+size();addEventListener("resize",()=>{size();if(still)draw(6)});
+if(still){draw(6);return}
+const t0=performance.now();let raf=0;
+const loop=n=>{draw((n-t0)/1000+6);raf=requestAnimationFrame(loop)};
+document.addEventListener("visibilitychange",()=>{if(document.hidden)cancelAnimationFrame(raf);else{last=(performance.now()-t0)/1000+6;raf=requestAnimationFrame(loop)}});
+raf=requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

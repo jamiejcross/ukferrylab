@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Ferry Lab Bridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a ship's console. Eyebrow, big stencilled title, then three wide oblong buttons stacked like bridge controls. */
+:root{
+  --paper:#edf2f1; --card:#f9fbfb; --ink:#0f2430; --muted:#4b6571; --line:#c9d7d7;
+  --signal:#d9481a; --sea:#145565; --sea-ink:#ffffff; --water:#d6e6e8; --label:#145565;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --sea:#1b4b5a; --sea-ink:#e8f1f3; --water:#0f2a35; --label:#6cc4d0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --sea:#1b4b5a; --sea-ink:#e8f1f3; --water:#0f2a35; --label:#6cc4d0; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:900px;margin:0 auto;padding-block:20px 56px;display:flex;flex-direction:column;gap:28px}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0;padding:0;list-style:none;font-weight:700;font-size:15px}
+.crumbs li{display:flex;gap:10px;align-items:center}
+.crumbs li+li::before{content:"\203A";color:var(--muted)}
+.crumbs a{color:var(--ink);text-decoration:none;border-bottom:2px solid transparent}
+.crumbs a:hover{border-bottom-color:var(--signal)}
+.crumbs a:focus-visible{outline:3px solid var(--signal);outline-offset:3px}
+.crumbs .home{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:.06em;text-transform:uppercase}
+.crumbs [aria-current]{color:var(--muted)}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--label)}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(46px,9vw,92px);line-height:.88;margin:0;text-transform:uppercase;text-wrap:balance}
+.lede{margin:0;color:var(--muted);max-width:52ch}
+.deck{display:flex;flex-direction:column;gap:18px;margin:0;padding:0 8px 8px 0;list-style:none}
+.btn{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:clamp(14px,3vw,28px);min-height:clamp(120px,18vw,150px);
+  padding:18px clamp(18px,4vw,36px);border:3px solid var(--ink);border-radius:8px;background:var(--card);color:var(--ink);text-decoration:none;
+  box-shadow:6px 6px 0 var(--ink);transition:transform .15s,box-shadow .15s,background .15s}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--signal);background:var(--water)}
+.btn:active{transform:translate(4px,4px);box-shadow:2px 2px 0 var(--ink)}
+.btn:focus-visible{outline:4px solid var(--signal);outline-offset:6px}
+.ic{width:clamp(52px,9vw,76px);height:clamp(52px,9vw,76px);border-radius:6px;background:var(--sea);color:var(--sea-ink);display:grid;place-items:center;flex:none}
+.ic svg{width:62%;height:62%}
+.txt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lbl{font-family:var(--display);font-weight:900;font-size:clamp(34px,6.4vw,58px);line-height:.9;text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--muted);font-size:16px;max-width:50ch}
+.arr{width:32px;height:32px;color:var(--signal)}
+@media (max-width:480px){.btn{grid-template-columns:auto minmax(0,1fr)}.arr{display:none}}
+footer{border-top:1px solid var(--line);padding-top:14px;font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<ol class="crumbs"><li><a class="home" href="../index.html">UK Ferry Lab</a></li><li><span aria-current="page">The Lab</span></li></ol>
+<header>
+  <div class="eyebrow">You are on the bridge &middot; choose where to go</div>
+  <h1>UK Ferry Lab</h1>
+  <p class="lede">Plan a crossing on the map, test a ferry in rough seas, or play a game.</p>
+</header>
+<ul class="deck">
+<li><a class="btn" href="../map/index.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg></span><span class="txt"><span class="lbl">Map</span><span class="sub">Pick a port to sail from and one to sail to. Your route lights up across the North Sea and the Hebrides.</span></span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a></li>
+<li><a class="btn" href="../waves/index.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 21c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M5 11h14l-2 3H7z"/><path d="M8 11V8h6v3M10 8V5"/></svg></span><span class="txt"><span class="lbl">Wave Simulator</span><span class="sub">A 3D ferry floats on a computer sea. Make the waves bigger and watch her roll, pitch and throw up spray.</span></span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a></li>
+<li><a class="btn" href="../games/index.html"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 10v5M4.5 12.5h5"/><circle cx="16" cy="11.5" r="1" fill="currentColor"/><circle cx="18.5" cy="14" r="1" fill="currentColor"/></svg></span><span class="txt"><span class="lbl">Games</span><span class="sub">Top Trumps, the Cargo Game, and Speed vs Fuel.</span></span><svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a></li>
+</ul>
+<footer>Routes, ships and physics are simplified for learning. Not made by or connected with any ferry company.</footer>
+</div>
+</body>
+</html>

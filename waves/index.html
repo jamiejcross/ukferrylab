@@ -1,0 +1,781 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<style>
+.fl-nav{--fln-bg:#0f2430;--fln-fg:#edf2f1;--fln-mute:#9db6bd;--fln-hot:#ff7443;background:var(--fln-bg);color:var(--fln-fg);font:600 14px/1.2 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fl-nav{--fln-bg:#050e13}}
+:root[data-theme="dark"] .fl-nav{--fln-bg:#050e13}
+.fl-nav ol{max-width:1180px;margin:0 auto;padding:10px 0;list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.fl-nav li{display:flex;align-items:center;gap:10px}
+.fl-nav li+li::before{content:"›";color:var(--fln-mute)}
+.fl-nav a{color:var(--fln-fg);text-decoration:none;border-bottom:2px solid transparent;padding:4px 0}
+.fl-nav a:hover{border-bottom-color:var(--fln-hot)}
+.fl-nav a:focus-visible{outline:3px solid var(--fln-hot);outline-offset:3px}
+.fl-nav .fl-home{font-family:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;font-weight:800;font-size:18px;letter-spacing:.06em;text-transform:uppercase}
+.fl-nav [aria-current]{color:var(--fln-mute)}
+</style><nav class="fl-nav" aria-label="Site"><ol><li><a class="fl-home" href="../index.html">UK Ferry Lab</a></li><li><a href="../lab/index.html">Ferry Lab</a></li><li><span aria-current="page">Wave Simulator</span></li></ol></nav>
+<title>North Sea Wave Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one wide "bridge window" stage, controls like a ship's console beneath, then reading sections at ~65ch */
+:root{
+  --paper:#edf2f1; --card:#f9fbfb; --ink:#0f2430; --muted:#4b6571; --line:#c9d7d7;
+  --signal:#d9481a; --signal-ink:#ffffff; --sea:#145565; --good:#1f7a4d; --warn:#b26b00; --bad:#b3261e;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --stage-ink:#e9f3f4; --stage-chip:rgba(8,22,30,.62);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0; --good:#5fd39a; --warn:#f2b44c; --bad:#ff8a80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1820; --card:#11242e; --ink:#e4eeee; --muted:#93abb1; --line:#23414b;
+  --signal:#ff7443; --signal-ink:#1a0b05; --sea:#6cc4d0; --good:#5fd39a; --warn:#f2b44c; --bad:#ff8a80; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,3vw,32px);padding-block:20px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--sea)}
+h1{font-family:var(--display);font-weight:900;font-size:clamp(44px,8vw,84px);line-height:.88;margin:4px 0 0;letter-spacing:.005em;text-wrap:balance;text-transform:uppercase}
+.lede{max-width:52ch;margin:0;color:var(--muted)}
+.route{font-family:var(--mono);font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.route b{color:var(--ink);font-weight:500}
+.route i{display:inline-block;width:22px;border-top:2px dashed var(--line)}
+
+.stage{position:relative;border-radius:6px;overflow:hidden;background:#24323a;height:clamp(360px,64vh,660px);touch-action:none;user-select:none;-webkit-user-select:none}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.hud{position:absolute;left:12px;top:12px;right:12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-width:640px}
+.chip{background:var(--stage-chip);color:var(--stage-ink);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:4px;padding:5px 9px;font-family:var(--mono);font-size:12px;line-height:1.2;display:flex;flex-direction:column;min-width:74px}
+.chip span{font-family:var(--display);font-size:22px;font-weight:800;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.views{display:flex;gap:6px;pointer-events:auto;align-self:flex-start}
+.views button{font:700 13px var(--body);border:0;border-radius:4px;padding:8px 11px;background:var(--stage-chip);color:var(--stage-ink);cursor:pointer;backdrop-filter:blur(6px)}
+.views button[aria-pressed="true"]{background:#f4f7f7;color:#0f2430}
+.hint{position:absolute;left:12px;bottom:10px;color:var(--stage-ink);font-size:13px;opacity:.85;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#e9f3f4}
+
+.console{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+@media (max-width:820px){.console{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2,.card h2,.sec h2{font-family:var(--mono);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.readout{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.readout label{font-weight:700;font-size:18px}
+.big{font-family:var(--display);font-weight:900;font-size:56px;line-height:.9;font-variant-numeric:tabular-nums}
+.big small{font-size:22px;font-weight:700;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--signal);height:32px}
+.ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:-8px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.btns button,.strike{font:700 14px var(--body);padding:8px 12px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.strike{background:var(--signal);color:var(--signal-ink);border-color:var(--signal)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.row>span{color:var(--muted);font-size:15px;min-width:9ch}
+.note{font-size:14px;color:var(--muted);margin:0}
+
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.cards{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.val{font-family:var(--display);font-weight:800;font-size:30px;line-height:1;text-wrap:balance}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.pill{align-self:flex-start;font-weight:700;font-size:14px;padding:3px 10px;border-radius:99px;color:#fff;background:var(--good)}
+.pill.warn{background:var(--warn);color:#1b1200}.pill.bad{background:var(--bad);color:#fff}
+.meter{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--good),var(--warn),var(--bad));transition:width .4s}
+
+.cabin{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px}
+@media (max-width:760px){.cabin{grid-template-columns:1fr}}
+.cabin canvas{width:100%;aspect-ratio:16/10;max-width:100%;border-radius:4px;display:block}
+.cabin h3{font-family:var(--display);font-size:32px;font-weight:800;margin:0 0 6px;text-transform:uppercase}
+.cabin p{margin:0 0 10px}
+.stats{display:flex;gap:22px;margin-top:8px}
+.stats b{display:block;font-family:var(--display);font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+.stats span{font-size:13px;color:var(--muted)}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-weight:700;cursor:pointer}
+.toggle input{width:20px;height:20px;accent-color:var(--signal)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+.sec h3{font-family:var(--display);font-weight:800;font-size:34px;text-transform:uppercase;margin:4px 0 10px;line-height:1}
+.phys{display:grid;gap:14px;margin:0}
+.phys div{border-top:1px solid var(--line);padding-top:10px}
+.phys dt{font-weight:700}
+.phys dd{margin:2px 0 0;color:var(--muted);max-width:62ch}
+.try{margin:0;padding-left:1.3em;display:grid;gap:8px;max-width:62ch}
+.try li::marker{font-family:var(--display);font-weight:800;color:var(--signal)}
+footer{border-top:1px solid var(--line);padding-top:14px;font-size:14px;color:var(--muted);max-width:80ch}
+footer p{margin:0 0 6px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <div class="eyebrow">Physics model · Aberdeen to Lerwick</div>
+    <h1>North Sea<br>Wave Lab</h1>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:560px">
+    <p class="lede">A 125-metre ferry floats on a computer sea. Every moment, the computer works out how hard the water pushes up on <span id="pCols">132</span> slices of the hull, and the ship rolls, pitches and rises in response. Nothing is pre-planned.</p>
+    <div class="route"><b>Aberdeen</b><i></i>open North Sea<i></i>Fair Isle<i></i><b>Lerwick</b></div>
+  </div>
+</header>
+
+<div class="stage" id="stage">
+  <canvas id="gl" aria-label="3D view of a ferry floating on a simulated sea"></canvas>
+  <div class="hud">
+    <div class="chips">
+      <div class="chip">Roll<span id="hRoll">0°</span></div>
+      <div class="chip">Pitch<span id="hPitch">0°</span></div>
+      <div class="chip">Rise &amp; fall<span id="hHeave">0 m</span></div>
+      <div class="chip">Wave every<span id="hPer">0 s</span></div>
+      <div class="chip">Biggest wave<span id="hMax">0 m</span></div>
+      <div class="chip">Speed<span id="hSpd">18 kn</span></div>
+    </div>
+    <div class="views" id="views">
+      <button data-v="orbit" aria-pressed="true">From the sea</button>
+      <button data-v="deck" aria-pressed="false">On deck</button>
+    </div>
+  </div>
+  <div class="hint" id="hint">Drag to look around · scroll or pinch to zoom</div>
+</div>
+
+<div class="console">
+  <div class="panel">
+    <div class="readout">
+      <label for="wave">Wave height</label>
+      <div class="big"><span id="hsOut">3.0</span> <small>metres</small></div>
+    </div>
+    <input id="wave" type="range" min="0" max="20" step="0.1" value="3">
+    <div class="ticks"><span>0 m</span><span>5 m</span><span>10 m</span><span>15 m</span><span>20 m</span></div>
+    <div class="btns" id="presets">
+      <button data-h="0.2">Glassy</button><button data-h="1">Breezy</button><button data-h="3" aria-pressed="true">Choppy</button>
+      <button data-h="5">Rough</button><button data-h="8">Gale</button><button data-h="12">Storm</button><button data-h="20">Monster</button>
+    </div>
+    <div class="row"><span>Waves come from</span>
+      <div class="btns" id="dirBtns"><button data-d="side" aria-pressed="true">The side</button><button data-d="ahead" aria-pressed="false">Straight ahead</button><button data-d="behind" aria-pressed="false">Behind</button></div>
+    </div>
+    <div class="row"><span>Stabilisers</span>
+      <div class="btns" id="stabBtns"><button data-s="1" aria-pressed="true">On</button><button data-s="0" aria-pressed="false">Off</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Weather</h2>
+    <p class="note">These switch on by themselves as the sea gets wilder. You can change them at any time.</p>
+    <div class="btns">
+      <button id="bRain" aria-pressed="false">Rain</button><button id="bHail" aria-pressed="false">Hail</button>
+      <button id="bLight" aria-pressed="false">Lightning</button><button id="bSound" aria-pressed="false">Sound</button>
+    </div>
+    <div><button class="strike" id="bStrike">Make lightning strike</button></div>
+    <p class="note">With sound on, count the seconds between flash and thunder. Every 3 seconds means the strike was about 1 km away.</p>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card"><h2>Sailors call it</h2><div class="val" id="cState">Slight</div><p id="cStateN">Douglas sea state 3 of 9</p></div>
+  <div class="card"><h2>A wave as tall as</h2><div class="val" id="cCmp">a grown-up</div><p>Wave height here is the average of the biggest third of the waves. Some will be bigger.</p></div>
+  <div class="card"><h2>Will the ferry sail?</h2><span class="pill" id="cSail">Yes</span><p id="cSailT">Sailing as normal.</p></div>
+  <div class="card"><h2>How do you feel?</h2><div class="val" id="cSick">Fine</div><div class="meter" aria-hidden="true"><i id="cSickBar"></i></div><p id="cSickT">Walking around is easy.</p></div>
+</div>
+
+<section class="cabin">
+  <canvas id="cafe" aria-label="Inside the ferry cafe: a table with a cup that slides as the ship rolls"></canvas>
+  <div>
+    <h3>Meanwhile, in the café</h3>
+    <p>This room is worked out from the same physics as the big view. The cup feels the ship's tilt and how fast the roll is speeding up or slowing down. When the push is stronger than friction, it slides.</p>
+    <label class="toggle"><input type="checkbox" id="stab2" checked> Stabilisers on</label>
+    <div class="stats">
+      <div><b id="cRoll">0°</b><span>roll right now</span></div>
+      <div><b id="cMaxRoll">0°</b><span>biggest roll, last 30 s</span></div>
+      <div><b id="cSpill">0</b><span>cups spilled</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="cols">
+  <section class="sec">
+    <h2>Under the bonnet</h2>
+    <h3>What the computer works out</h3>
+    <dl class="phys">
+      <div><dt>The sea is <span id="pWaves">32</span> waves added together</dt><dd>Each has its own length, speed and direction. Their sizes follow JONSWAP, a recipe scientists made from measuring real North Sea waves. Bigger seas get longer waves, and the crests get sharper.</dd></div>
+      <div><dt>Every slice of hull is pushed up</dt><dd>The hull is cut into <span class="num" id="pCols2">132</span> upright slices. Each is pushed up by the weight of the water it pushes aside. That's Archimedes' principle, worked out 120 times a second.</dd></div>
+      <div><dt>The ship fights back with its weight</dt><dd>This model ship weighs about <span class="num" id="pMass">11,000</span> tonnes. Left alone, it would roll from side to side once every <span class="num" id="pRoll">12</span> seconds. When the waves arrive at the same rhythm, the rolling builds up.</dd></div>
+      <div><dt>Stabilisers add drag</dt><dd>Fins stick out from the hull under the water and resist the rolling. Switch them off to see the difference.</dd></div>
+    </dl>
+  </section>
+  <section class="sec">
+    <h2>Experiments</h2>
+    <h3>Try this</h3>
+    <ol class="try">
+      <li>Set the waves to 5 metres from the side. Watch the roll number, then switch the stabilisers off. How big does the roll get?</li>
+      <li>Change to "Straight ahead". Does the ship roll or pitch more now?</li>
+      <li>Push the waves to 15 metres from straight ahead. Watch the front of the ship crash down and throw up spray.</li>
+      <li>Watch "Biggest wave". How much bigger than the slider does it get?</li>
+      <li>Go "On deck" in an 8 metre sea and watch the horizon.</li>
+    </ol>
+  </section>
+</div>
+
+<footer>
+  <p>The ship is a computer model with about the size and shape of MV Hjaltland, which sails this route: 125 m long, 20 m wide and 5.4 m deep in the water. Its colours are made up. This page is not made by or connected with NorthLink Ferries.</p>
+  <p>Simplified: the water pushes the ship up and down but not sideways, and spray is drawn as particles rather than worked out as flowing water. Real decisions about sailing are made by the ship's captain.</p>
+</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t)};
+const lerp=(a,b,t)=>a+(b-a)*t;
+const G=9.81, RHO=1025;
+
+/* ---------------- state ---------------- */
+const S={hsTarget:3, hs:3, dirTarget:-Math.PI/2, dir:-Math.PI/2, stab:true, U:9.3,
+  heave:0,vh:0,ah:0, roll:0,vr:0,ar:0, pitch:0,vp:0,ap:0,
+  rain:false,hail:false,light:false,sound:false, flash:0, view:'orbit', t:0, spills:0};
+window.__S=S;
+
+/* ---------------- waves (shared by GPU and physics) ---------------- */
+const NW=32;
+let seed=20020308; const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const C=[];
+for(let i=0;i<NW;i++){const b=i/(NW-1);
+  C.push({wr:(0.72+5.2*Math.pow(b,1.6))*(1+(rnd()-0.5)*0.06), spr:(rnd()-0.5)*2*(0.18+0.5*b), ph:rnd()*6.283,
+    k:0,a:0,dx:0,dz:-1,Q:0,rate:0});}
+let Tp=8;
+function spectrum(){
+  const Hs=Math.max(S.hs,0);
+  Tp=clamp(3.9*Math.sqrt(Hs)+2.2,3.5,17.5);
+  const wp=2*Math.PI/Tp, gam=3.3;
+  let m0=0;
+  for(let i=0;i<NW;i++){const c=C[i]; const w=c.wr*wp;
+    const wl=(i>0?C[i-1].wr:c.wr*0.9)*wp, wh=(i<NW-1?C[i+1].wr:c.wr*1.1)*wp; const dw=(wh-wl)/2;
+    const sig=w<=wp?0.07:0.09; const r=Math.exp(-((w-wp)**2)/(2*sig*sig*wp*wp));
+    const Sw=(5/16)*Hs*Hs*Math.pow(wp,4)*Math.pow(w,-5)*Math.exp(-1.25*Math.pow(wp/w,4))*Math.pow(gam,r)*(1-0.287*Math.log(gam))*Math.max(1,w/wp);
+    c.a=Math.sqrt(Math.max(0,2*Sw*dw)); c.k=w*w/G; c.w=w; m0+=c.a*c.a/2;}
+  const sc=m0>0?Hs/(4*Math.sqrt(m0)):0;
+  const steep=0.5+0.38*smooth(1,12,Hs);
+  for(const c of C){c.a*=sc; const ang=S.dir+c.spr; c.dx=Math.cos(ang); c.dz=Math.sin(ang);
+    c.Q=c.a>1e-4?Math.min(1,steep/(c.k*c.a*NW)):0; c.rate=c.k*c.dx*S.U-c.w;}
+}
+function advance(dt){for(const c of C){c.ph+=c.rate*dt; if(c.ph>1e4||c.ph<-1e4)c.ph%=6.283185307}}
+const _w={y:0,vy:0};
+function water(x,z){
+  let px=x,pz=z;
+  for(let it=0;it<2;it++){let dx=0,dz=0;
+    for(const c of C){if(c.a<1e-4)continue;const th=c.k*(c.dx*px+c.dz*pz)+c.ph;const q=c.Q*c.a*Math.cos(th);dx+=q*c.dx;dz+=q*c.dz;}
+    px=x-dx;pz=z-dz;}
+  let y=0,vy=0;
+  for(const c of C){if(c.a<1e-4)continue;const th=c.k*(c.dx*px+c.dz*pz)+c.ph;y+=c.a*Math.sin(th);vy+=c.a*Math.cos(th)*c.rate;}
+  _w.y=y;_w.vy=vy;return _w;
+}
+
+/* ---------------- ship geometry & hydrostatics ---------------- */
+const L=125,B=20,T=5.4,D=8.6, YG=1.5;
+function keelY(x){const xn=x/(L/2); if(xn>0.76){const t=(xn-0.76)/0.24;return -T+T*1.2*t*t;} return -T;}
+function hb(x,y){
+  const xn=x/(L/2), yl=keelY(x); const h=y-yl; if(h<0)return 0;
+  const yn=clamp((y+T)/(T+D),0,1); let f=1;
+  if(xn>0.42){const t=Math.min(1,(xn-0.42)/0.58); f=Math.pow(Math.max(0,1-t*t),0.9-0.6*yn);}
+  if(xn<-0.84){const t=(-0.84-xn)/0.16; f*=1-0.08*t;}
+  let fz=1; if(h<2.6){const u=1-h/2.6; fz=Math.sqrt(Math.max(0,1-u*u));}
+  return B/2*f*fz;
+}
+const NX=22,NZ=6, cols=[];
+(function(){const dx=L/NX;
+  for(let i=0;i<NX;i++){const x=-L/2+(i+0.5)*dx; const w=hb(x,0); if(w<0.3)continue; const yb=keelY(x);
+    for(let j=0;j<NZ;j++){const z=-w+(j+0.5)*2*w/NZ; cols.push({x,z,yb,A:dx*2*w/NZ});}}
+})();
+let M=0,xG=0;{let mx=0;for(const c of cols){const v=c.A*(-c.yb);M+=v;mx+=v*c.x;} xG=mx/M; M*=RHO;}
+const Awp=cols.reduce((s,c)=>s+c.A,0);
+const HCOL=T+D+6;
+const Ir=M*Math.pow(0.4*B,2)*1.2, Ip=M*Math.pow(0.26*L,2)*1.6, Mh=M*1.8;
+const Kh=RHO*G*Awp;
+const ch=2*0.22*Math.sqrt(Kh*Mh);
+
+const _r={x:0,y:0,z:0};
+function rot(qx,qy,qz){ // R = Rz(pitch)·Rx(roll)
+  const cr=Math.cos(S.roll),sr=Math.sin(S.roll),cp=Math.cos(S.pitch),sp=Math.sin(S.pitch);
+  const y1=qy*cr-qz*sr, z1=qy*sr+qz*cr;
+  _r.x=qx*cp-y1*sp; _r.y=qx*sp+y1*cp; _r.z=z1; return _r;
+}
+function forces(){
+  let Fy=0,tx=0,tz=0; const gy=YG+S.heave;
+  for(const c of cols){const r=rot(c.x-xG,c.yb-YG,c.z); const wx=xG+r.x, wy=gy+r.y, wz=r.z;
+    const w=water(wx,wz); const d=clamp(w.y-wy,0,HCOL); if(d<=0)continue;
+    const F=RHO*G*c.A*d; const m=rot(c.x-xG,c.yb-YG+d/2,c.z); // push acts at the middle of the wet part
+    Fy+=F; tx+=-m.z*F; tz+=m.x*F;}
+  return [Fy-M*G,tx,tz];
+}
+// natural roll stiffness from the model itself (calm water, small tilt)
+let Kr=1, Kp=1;
+(function(){const save=S.hs; S.hs=0; spectrum();
+  S.roll=0.02; const a=forces()[1]; S.roll=0; Kr=Math.max(1,-a/0.02);
+  S.pitch=0.004; const b=forces()[2]; S.pitch=0; Kp=Math.max(1,-b/0.004);
+  S.hs=save; spectrum();})();
+const Trolls=2*Math.PI*Math.sqrt(Ir/Kr);
+const cp_=2*0.28*Math.sqrt(Kp*Ip);
+$('pMass').textContent=(Math.round(M/1000/100)*100).toLocaleString('en-GB');
+$('pRoll').textContent=Math.round(Trolls);$('pCols').textContent=$('pCols2').textContent=cols.length;$('pWaves').textContent=NW;
+
+function physStep(h){
+  advance(h);
+  const [Fy,tx,tz]=forces();
+  const zeta=0.035+(S.stab?0.3*clamp(S.U/9.3,0.4,1):0); const crl=2*zeta*Math.sqrt(Kr*Ir);
+  S.ah=(Fy-ch*S.vh)/Mh;
+  S.ar=(tx-crl*S.vr-0.6*Ir*S.vr*Math.abs(S.vr))/Ir;
+  S.ap=(tz-cp_*S.vp)/Ip;
+  S.vh+=S.ah*h; S.vr+=S.ar*h; S.vp+=S.ap*h;
+  S.heave+=S.vh*h; S.roll+=S.vr*h; S.pitch+=S.vp*h;
+  S.roll=clamp(S.roll,-0.75,0.75); S.pitch=clamp(S.pitch,-0.35,0.35);
+}
+
+/* ---------------- renderer ---------------- */
+const canvas=$('gl'), stage=$('stage');
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});}catch(e){renderer=null}
+if(!renderer||!renderer.getContext()){stage.insertAdjacentHTML('beforeend','<div class="nogl"><p>Your browser could not start 3D graphics, so the sea can\'t be drawn here. The cards and café below still work.</p></div>');}
+const small=Math.min(screen.width,screen.height)<700;
+let pr=Math.min(window.devicePixelRatio||1,small?1.25:1.5);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.5,9000);
+if(renderer){renderer.setPixelRatio(pr);renderer.outputEncoding=THREE.sRGBEncoding;}
+
+const sunDir=new THREE.Vector3(-0.45,0.32,-0.83).normalize();
+const skyCalm={top:new THREE.Color('#5f93c4'),hor:new THREE.Color('#c9dbe6'),deep:new THREE.Color('#0a3346'),shal:new THREE.Color('#1c6a72')};
+const skyStorm={top:new THREE.Color('#1c2328'),hor:new THREE.Color('#5c666b'),deep:new THREE.Color('#0b1d23'),shal:new THREE.Color('#2b5450')};
+const col={top:new THREE.Color(),hor:new THREE.Color(),deep:new THREE.Color(),shal:new THREE.Color()};
+
+/* sky */
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{uTop:{value:col.top},uHor:{value:col.hor},uSun:{value:sunDir},uStorm:{value:0},uFlash:{value:0},uTime:{value:0}},
+vertexShader:`varying vec3 vD;void main(){vD=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+fragmentShader:`uniform vec3 uTop,uHor,uSun;uniform float uStorm,uFlash,uTime;varying vec3 vD;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*n(p);p*=2.03;a*=.5;}return s;}
+void main(){vec3 d=normalize(vD);float y=max(d.y,0.);
+vec3 c=mix(uHor,uTop,pow(y,.55));
+vec2 cp=d.xz/(d.y+.12)*1.4+vec2(uTime*.01,uTime*.004);
+float cl=smoothstep(.45-.25*uStorm,.85,fbm(cp))*smoothstep(0.,.25,d.y);
+c=mix(c,mix(vec3(.92,.94,.96),vec3(.18,.2,.22),uStorm),cl*(.55+.4*uStorm));
+float s=max(dot(d,uSun),0.);c+=vec3(1.,.9,.7)*(pow(s,900.)*6.+pow(s,12.)*.25)*(1.-uStorm*.95)*(1.-cl);
+c+=uFlash*vec3(.75,.8,1.)*(.6+cl);
+if(d.y<0.)c=uHor;
+gl_FragColor=vec4(c,1.);}`});
+const sky=new THREE.Mesh(new THREE.SphereGeometry(6000,32,16),skyMat);scene.add(sky);
+
+/* ocean */
+function oceanGeo(seg){
+  const n=seg+1, pos=new Float32Array(n*n*3), idx=[]; const R=3200;
+  const m=u=>R*(u+3*u*u*u)/4;
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const u=-1+2*i/seg, v=-1+2*j/seg;const k=(j*n+i)*3;pos[k]=m(u);pos[k+1]=0;pos[k+2]=m(v);}
+  for(let j=0;j<seg;j++)for(let i=0;i<seg;i++){const a=j*n+i,b=a+1,c=a+n,d=c+1;idx.push(a,c,b,b,c,d);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setIndex(idx);
+  g.boundingSphere=new THREE.Sphere(new THREE.Vector3(),1e5);return g;
+}
+const uW=[],uPh=new Float32Array(NW),uQ=new Float32Array(NW);for(let i=0;i<NW;i++)uW.push(new THREE.Vector4());
+const oceanMat=new THREE.ShaderMaterial({uniforms:{
+  uW:{value:uW},uPh:{value:uPh},uQ:{value:uQ},uSun:{value:sunDir},uSky:{value:col.top},uHor:{value:col.hor},uDeep:{value:col.deep},uShal:{value:col.shal},
+  uStorm:{value:0},uFlash:{value:0},uTime:{value:0},uHs:{value:3},uFog:{value:0.0004},uWake:{value:0},uShip:{value:new THREE.Vector4(L/2,B/2,0,0)},uSpd:{value:1},uWdir:{value:new THREE.Vector2(0,-1)}},
+vertexShader:`#define NW ${NW}
+uniform vec4 uW[NW];uniform float uPh[NW];uniform float uQ[NW];
+varying vec3 vP;varying vec3 vN;varying float vJ;varying float vH;
+void main(){vec2 xz=position.xz;float dist=length(xz-cameraPosition.xz);
+vec3 P=vec3(xz.x,0.,xz.y);vec3 N=vec3(0.,1.,0.);float J=1.;
+for(int i=0;i<NW;i++){vec4 w=uW[i];float a=w.w*clamp(1.-dist*w.z/160.,0.,1.);
+float th=w.z*(w.x*xz.x+w.y*xz.y)+uPh[i];float s=sin(th),c=cos(th);float qa=uQ[i]*a;
+P.x+=qa*w.x*c;P.z+=qa*w.y*c;P.y+=a*s;
+N.x-=w.x*w.z*a*c;N.z-=w.y*w.z*a*c;N.y-=qa*w.z*s;J-=qa*w.z*s;}
+vP=P;vN=N;vJ=J;vH=P.y;gl_Position=projectionMatrix*viewMatrix*vec4(P,1.);}`,
+fragmentShader:`uniform vec3 uSun,uSky,uHor,uDeep,uShal;uniform float uStorm,uFlash,uTime,uHs,uFog,uWake,uSpd;uniform vec4 uShip;uniform vec2 uWdir;
+varying vec3 vP;varying vec3 vN;varying float vJ;varying float vH;
+float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*n(p);p*=2.1;a*=.5;}return s;}
+float hbw(float x){float xn=x/uShip.x;float f=1.;if(xn>.42){float t=min(1.,(xn-.42)/.58);f=pow(max(0.,1.-t*t),.9);}return uShip.y*f;}
+void main(){
+float d=length(cameraPosition-vP);
+vec2 e=vec2(.6,0.);vec2 rp=vP.xz*.55+vec2(uTime*.7,uTime*.35);
+float r0=fbm(rp),rx=fbm(rp+e.xy),rz=fbm(rp+e.yx);
+float rs=(.35+uStorm*.9)*clamp(1.-d/600.,0.,1.);
+vec3 N=normalize(vN+vec3(r0-rx,0.,r0-rz)*rs*1.6);
+vec3 V=normalize(cameraPosition-vP);
+float fr=.02+.98*pow(1.-max(dot(N,V),0.),5.);
+vec3 R=reflect(-V,N);R.y=abs(R.y);
+vec3 sky=mix(uHor,uSky,pow(clamp(R.y,0.,1.),.6));
+float crest=smoothstep(-.35,1.,vH/(uHs*.5+.3));
+float sss=pow(max(dot(V,-uSun)*.5+.5,0.),2.)*crest*crest;
+vec3 wat=mix(uDeep*.6,uShal,crest*.7)+uShal*sss*.45;
+vec3 c=mix(wat,sky,fr*.8);
+float sp=pow(max(dot(R,uSun),0.),220.)*(1.-uStorm*.9)*3.;c+=vec3(1.,.93,.8)*sp;
+// foam: crests where the surface is squeezed
+vec2 fp=vP.xz*.09+vec2(uTime*.02,0.);
+float fn=fbm(fp*3.)*.6+fbm(fp*11.)*.4;
+float foam=smoothstep(.5+.25*uStorm,.05,vJ)*smoothstep(.2,.6,fn)*smoothstep(.0,1.5,uHs);
+vec2 sp2=vec2(dot(vP.xz,uWdir),dot(vP.xz,vec2(-uWdir.y,uWdir.x)));float streak=fbm(vec2(sp2.x*.012,sp2.y*.09)+vec2(uTime*.01,0.));
+foam+=smoothstep(.55,.85,streak)*uStorm*.35*smoothstep(.2,.8,fn)*clamp(1.-d/1800.,0.,1.);
+// hull contact, bow wave and wake (ship sits at the origin, sea flows past)
+float x=vP.x,z=abs(vP.z);
+float wN=fbm(vec2((x+uWake)*.12,vP.z*.18));
+if(x>-uShip.x&&x<uShip.x){float side=z-hbw(x);float band=2.+uHs*.35;foam+=smoothstep(band,0.,side)*smoothstep(-2.,0.,side)*(.55+.45*wN)*(.5+uSpd*.5);}
+float aft=-uShip.x-x;
+if(aft>-4.){float a=max(aft,0.);float hw=uShip.y*.85+a*.11;float core=smoothstep(hw,hw*.4,z)*exp(-a/420.)*uSpd;foam+=core*smoothstep(.3,.7,wN)*1.1;
+ float kel=abs(z-(uShip.y+a*.34));foam+=smoothstep(3.+a*.02,0.,kel)*exp(-a/260.)*.7*uSpd*smoothstep(.35,.7,wN);}
+foam=clamp(foam,0.,1.);
+c=mix(c,vec3(.92,.95,.96)*(1.-uStorm*.25),foam*.92);
+c+=uFlash*vec3(.5,.55,.65)*(.4+fr);
+float fog=1.-exp(-d*uFog);c=mix(c,uHor,fog);
+gl_FragColor=vec4(c,1.);
+}`});
+const ocean=new THREE.Mesh(oceanGeo(small?190:300),oceanMat);ocean.frustumCulled=false;scene.add(ocean);
+
+/* lights */
+const hemi=new THREE.HemisphereLight(0xcfe2ee,0x24444c,0.9);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff1dc,1.5);sun.position.copy(sunDir).multiplyScalar(300);scene.add(sun);
+scene.fog=new THREE.FogExp2(0xc9dbe6,0.0004);
+
+/* ---------------- ship model (original livery) ---------------- */
+const pivot=new THREE.Group();scene.add(pivot);
+const ship=new THREE.Group();ship.position.set(-xG,-YG,0);pivot.add(ship);
+(function buildShip(){
+  const NS=72;
+  const bands=[{y0:-99,y1:-0.25,c:'#6e221d',n:6},{y0:-0.25,y1:0.55,c:'#16191d',n:1},{y0:0.55,y1:6.4,c:'#13294a',n:4},{y0:6.4,y1:7.1,c:'#c43a2c',n:1},{y0:7.1,y1:D,c:'#13294a',n:1}];
+  const hullMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.55,metalness:.15});
+  for(const bd of bands){
+    const n=bd.n, pos=[],colr=[],idx=[]; const cc=new THREE.Color(bd.c);
+    const stride=(n+1)*2;
+    for(let i=0;i<=NS;i++){const x=-L/2+L*i/NS; const yl=keelY(x); const y0=Math.max(bd.y0,yl), y1=Math.max(bd.y1,yl);
+      for(let j=0;j<=n;j++){const y=lerp(y0,y1,Math.pow(j/n,bd.y0<-50?1.6:1)); const w=hb(x,y);
+        pos.push(x,y,w, x,y,-w); colr.push(cc.r,cc.g,cc.b,cc.r,cc.g,cc.b);}}
+    for(let i=0;i<NS;i++)for(let j=0;j<n;j++){const a=i*stride+j*2, b=(i+1)*stride+j*2, c=i*stride+(j+1)*2, d=(i+1)*stride+(j+1)*2;
+      idx.push(a,b,c, b,d,c); idx.push(a+1,c+1,b+1, b+1,c+1,d+1);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colr,3));g.setIndex(idx);g.computeVertexNormals();
+    ship.add(new THREE.Mesh(g,hullMat));
+  }
+  // deck and stern transom
+  {const pos=[],idx=[];for(let i=0;i<=NS;i++){const x=-L/2+L*i/NS,w=hb(x,D);pos.push(x,D,-w,x,D,w);}
+   for(let i=0;i<NS;i++){const p=i*2,s=p+1,p2=p+2,s2=p+3;idx.push(p,s,p2,s,s2,p2);}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+   ship.add(new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:'#7d8a8f',roughness:.9})));}
+  {const shape=new THREE.Shape();const x0=-L/2;const ys=[];for(let j=0;j<=24;j++)ys.push(lerp(keelY(x0),D,j/24));
+   shape.moveTo(-hb(x0,ys[0]),ys[0]);for(const y of ys)shape.lineTo(hb(x0,y),y);for(let j=ys.length-1;j>=0;j--)shape.lineTo(-hb(x0,ys[j]),ys[j]);
+   const g=new THREE.ShapeGeometry(shape);const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:'#13294a',roughness:.6,side:THREE.DoubleSide}));
+   m.rotation.y=-Math.PI/2;m.position.x=x0;ship.add(m);}
+  // window strip textures
+  function winTex(cols,lit){const c=document.createElement('canvas');c.width=1024;c.height=32;const x=c.getContext('2d');
+    const w=1024/cols;for(let i=0;i<cols;i++){x.fillStyle=lit?(Math.random()<.7?'#ffd9a0':'#3a3020'):'#26343f';x.fillRect(i*w+w*.14,5,w*.72,22);}
+    const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;}
+  const white=new THREE.MeshStandardMaterial({color:'#eef1f2',roughness:.5,metalness:.05});
+  const winMat=new THREE.MeshStandardMaterial({map:winTex(48,false),emissiveMap:winTex(48,true),emissive:new THREE.Color('#ffcf8a'),emissiveIntensity:0,transparent:true,alphaTest:.1,roughness:.2,metalness:.3});
+  window.__winMat=winMat;
+  function tier(x0,x1,y0,y1,w,rows){const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,w),white);m.position.set((x0+x1)/2,(y0+y1)/2,0);ship.add(m);
+    for(const r of rows){for(const s of[1,-1]){const p=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0-3,1.3),winMat);p.position.set((x0+x1)/2,r,s*(w/2+0.04));if(s<0)p.rotation.y=Math.PI;ship.add(p);}}
+    return m;}
+  tier(-55,44,D,D+2.7,B-0.6,[D+1.4]);
+  tier(-52,40,D+2.7,D+6.2,B-1.2,[D+4.1,D+5.4]);
+  tier(-44,35,D+6.2,D+9.4,B-2.6,[D+7.8]);
+  tier(-32,33,D+9.4,D+12.2,B-4.6,[D+10.8]);
+  // bridge with wings
+  const br=new THREE.Mesh(new THREE.BoxGeometry(9,3,B+1),white);br.position.set(28,D+13.7,0);ship.add(br);
+  const bw=new THREE.Mesh(new THREE.PlaneGeometry(B-1,1.5),winMat);bw.rotation.y=Math.PI/2;bw.position.set(32.55,D+14,0);ship.add(bw);
+  // sloped forward faces
+  for(const [x,y,h] of [[44,D+1.35,2.7],[40,D+4.45,3.5],[35,D+7.8,3.2]]){const wedge=new THREE.Mesh(new THREE.BoxGeometry(3,h,B-1.5),white);wedge.position.set(x,y,0);wedge.rotation.z=0.35;ship.add(wedge);}
+  // funnel
+  const fun=new THREE.Group();fun.position.set(-26,D+12.2,0);fun.rotation.z=0.12;ship.add(fun);
+  const fg=new THREE.CylinderGeometry(1,1.1,9,24);const fm=new THREE.Mesh(fg,new THREE.MeshStandardMaterial({color:'#13294a',roughness:.5}));fm.scale.set(3.6,1,1.7);fm.position.y=4.5;fun.add(fm);
+  for(const y of[5.2,6.7]){const b=new THREE.Mesh(new THREE.CylinderGeometry(1.02,1.04,0.8,24),new THREE.MeshStandardMaterial({color:'#c43a2c',roughness:.5}));b.scale.set(3.6,1,1.7);b.position.y=y;fun.add(b);}
+  const top=new THREE.Mesh(new THREE.CylinderGeometry(.9,.98,0.6,24),new THREE.MeshStandardMaterial({color:'#15181c'}));top.scale.set(3.6,1,1.7);top.position.y=9.2;fun.add(top);
+  // mast
+  const mst=new THREE.Mesh(new THREE.CylinderGeometry(.25,.35,8,8),white);mst.position.set(24,D+19,0);ship.add(mst);
+  const yard=new THREE.Mesh(new THREE.BoxGeometry(.4,.4,6),white);yard.position.set(24,D+21,0);ship.add(yard);
+  // lifeboats
+  const boatMat=new THREE.MeshStandardMaterial({color:'#ef6a1f',roughness:.5});
+  for(const x of[-18,-8,2,12])for(const s of[1,-1]){const b=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.2,7.5,12),boatMat);b.rotation.z=Math.PI/2;b.scale.set(1,1,0.9);b.position.set(x,D+7.4,s*(B/2-0.6));ship.add(b);}
+  // bow bulwark
+  const bwk=new THREE.Mesh(new THREE.BoxGeometry(18,1.2,0.3),new THREE.MeshStandardMaterial({color:'#13294a'}));
+  for(const s of[1,-1]){const m=bwk.clone();m.position.set(51,D+0.6,s*hb(51,D));m.rotation.y=-s*0.32;ship.add(m);}
+})();
+
+/* ---------------- spray particles ---------------- */
+const NP=small?2600:5200;
+const pPos=new Float32Array(NP*3),pAl=new Float32Array(NP),pSz=new Float32Array(NP),pV=new Float32Array(NP*3),pLife=new Float32Array(NP);let pHead=0;
+const pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));pGeo.setAttribute('alpha',new THREE.BufferAttribute(pAl,1));pGeo.setAttribute('size',new THREE.BufferAttribute(pSz,1));
+const pMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{uScale:{value:600},uLight:{value:1}},
+vertexShader:`attribute float alpha;attribute float size;varying float vA;uniform float uScale;void main(){vA=alpha;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=clamp(size*uScale/-mv.z,1.,120.);gl_Position=projectionMatrix*mv;}`,
+fragmentShader:`varying float vA;uniform float uLight;void main(){vec2 p=gl_PointCoord-.5;float r=dot(p,p);if(r>.25)discard;float a=smoothstep(.25,0.,r)*vA;gl_FragColor=vec4(vec3(.93,.96,.97)*uLight,a);}`});
+const spray=new THREE.Points(pGeo,pMat);spray.frustumCulled=false;scene.add(spray);
+function emit(x,y,z,vx,vy,vz,size,life){const i=pHead;pHead=(pHead+1)%NP;pPos[i*3]=x;pPos[i*3+1]=y;pPos[i*3+2]=z;pV[i*3]=vx;pV[i*3+1]=vy;pV[i*3+2]=vz;pSz[i]=size;pLife[i]=life;pAl[i]=.9;}
+// sample points around the hull at the waterline
+const rim=[];
+for(let x=-58;x<=60;x+=3.5){const w=hb(x,0.2);if(w<0.3)continue;for(const s of[1,-1]){
+  const fwd=x>40?clamp((x-40)/25,0,1)*0.8:0; const nz=s, nx=fwd; const ln=Math.hypot(nx,nz);
+  rim.push({x,z:s*w,nx:nx/ln,nz:nz/ln,prevY:null,acc:0});}}
+function sprayTick(dt){
+  const gy=YG+S.heave; const wdx=Math.cos(S.dir),wdz=Math.sin(S.dir);
+  const wind=4+S.hs*1.2;
+  for(const p of rim){const r=rot(p.x-xG,0.2-YG,p.z); const wx=xG+r.x, wy=gy+r.y, wz=r.z;
+    const pv=p.prevY===null?0:(wy-p.prevY)/dt; p.prevY=wy;
+    const w=water(wx,wz); const rel=w.y-wy; const closing=w.vy-pv; // water rising past the hull (+) or hull slamming down (+)
+    const facing=-(p.nx*wdx+p.nz*wdz); // 1 = facing the oncoming waves
+    if(rel>-0.4&&closing>1.2){
+      const k=(closing-1.2)*(0.6+Math.max(0,facing))*(0.4+Math.min(rel+0.4,6)*0.35)*(0.5+S.hs*0.12);
+      p.acc+=Math.min(k,30)*dt*30;
+      const cl=Math.min(closing,9); const up=1.5+cl*(0.85+S.hs*0.04), out=1+cl*0.3;
+      while(p.acc>=1){p.acc-=1; const j=Math.random();
+        emit(wx+(Math.random()-.5)*4.5,Math.max(wy,w.y)+Math.random()*0.6,wz+(Math.random()-.5)*1.2,
+          p.nx*out*(0.4+Math.random())+(Math.random()-.5)*1.5+wdx*wind*0.15,
+          up*(0.35+0.85*Math.sqrt(j)),
+          p.nz*out*(0.4+Math.random())+(Math.random()-.5)*1.5+wdz*wind*0.15,
+          0.35+Math.random()*1.0+S.hs*0.04, 1.2+Math.random()*1.8);}
+    } else p.acc*=0.9;
+  }
+  // bow wave at speed
+  if(S.U>3&&Math.random()<dt*S.U*1.6){for(const s of[1,-1]){const x=56,r=rot(x-xG,0.2-YG,s*hb(x,0.2));emit(xG+r.x,gy+r.y,r.z,-S.U*0.4,1.5+Math.random()*2,s*(2+Math.random()*2),0.8+Math.random(),1.4);}}
+  for(let i=0;i<NP;i++){if(pLife[i]<=0){if(pAl[i]>0)pAl[i]=0;continue;}
+    pLife[i]-=dt; const d=Math.exp(-0.35*dt);
+    pV[i*3]=pV[i*3]*d+(wdx*wind-pV[i*3])*0.25*dt - S.U*0.0; pV[i*3+2]=pV[i*3+2]*d+(wdz*wind-pV[i*3+2])*0.25*dt;
+    pV[i*3+1]=pV[i*3+1]*d-G*dt;
+    pPos[i*3]+=(pV[i*3]-S.U)*dt; pPos[i*3+1]+=pV[i*3+1]*dt; pPos[i*3+2]+=pV[i*3+2]*dt;
+    pSz[i]+=dt*0.5;
+    const wl=water(pPos[i*3],pPos[i*3+2]).y; if(pPos[i*3+1]<wl-0.5&&pV[i*3+1]<0){pLife[i]=0;}
+    pAl[i]=clamp(pLife[i]/0.9,0,0.6);}
+  pGeo.attributes.position.needsUpdate=true;pGeo.attributes.alpha.needsUpdate=true;pGeo.attributes.size.needsUpdate=true;
+}
+
+/* ---------------- weather ---------------- */
+const NR=small?900:1800, rPos=new Float32Array(NR*6), rBox=70;
+const rGeo=new THREE.BufferGeometry();rGeo.setAttribute('position',new THREE.BufferAttribute(rPos,3));
+const rain=new THREE.LineSegments(rGeo,new THREE.LineBasicMaterial({color:0xc9d6de,transparent:true,opacity:.0,fog:false}));rain.frustumCulled=false;scene.add(rain);
+const rDrops=[];for(let i=0;i<NR;i++)rDrops.push({x:(Math.random()-.5)*2*rBox,y:Math.random()*60,z:(Math.random()-.5)*2*rBox});
+const NH=small?300:600,hPos=new Float32Array(NH*3);const hGeo=new THREE.BufferGeometry();hGeo.setAttribute('position',new THREE.BufferAttribute(hPos,3));
+const hail=new THREE.Points(hGeo,new THREE.PointsMaterial({color:0xf2f6f8,size:.35,transparent:true,opacity:0,fog:false}));hail.frustumCulled=false;scene.add(hail);
+const hDrops=[];for(let i=0;i<NH;i++)hDrops.push({x:(Math.random()-.5)*2*rBox,y:Math.random()*60,z:(Math.random()-.5)*2*rBox});
+let rainA=0,hailA=0;
+function weatherTick(dt){
+  rainA=lerp(rainA,S.rain?1:0,1-Math.exp(-dt*2)); hailA=lerp(hailA,S.hail?1:0,1-Math.exp(-dt*2));
+  rain.visible=rainA>0.01; hail.visible=hailA>0.01;
+  const cx=camera.position.x,cy=camera.position.y,cz=camera.position.z; const wdx=Math.cos(S.dir),wdz=Math.sin(S.dir); const wind=4+S.hs*1.3;
+  if(rain.visible){for(let i=0;i<NR;i++){const d=rDrops[i];d.y-=22*dt;d.x+=(wdx*wind-S.U)*dt;d.z+=wdz*wind*dt;
+      if(d.y<-10){d.y+=70;d.x=(Math.random()-.5)*2*rBox;d.z=(Math.random()-.5)*2*rBox;}
+      if(d.x<-rBox)d.x+=2*rBox;if(d.x>rBox)d.x-=2*rBox;if(d.z<-rBox)d.z+=2*rBox;if(d.z>rBox)d.z-=2*rBox;
+      const k=i*6;rPos[k]=cx+d.x;rPos[k+1]=cy+d.y-30;rPos[k+2]=cz+d.z;rPos[k+3]=cx+d.x-(wdx*wind-S.U)*0.05;rPos[k+4]=cy+d.y-30+1.1;rPos[k+5]=cz+d.z-wdz*wind*0.05;}
+    rGeo.attributes.position.needsUpdate=true;rain.material.opacity=.45*rainA;}
+  if(hail.visible){for(let i=0;i<NH;i++){const d=hDrops[i];d.y-=28*dt;d.x+=(wdx*wind*0.6-S.U)*dt;d.z+=wdz*wind*0.6*dt;
+      if(d.y<-10){d.y+=70;d.x=(Math.random()-.5)*2*rBox;d.z=(Math.random()-.5)*2*rBox;}
+      if(d.x<-rBox)d.x+=2*rBox;if(d.x>rBox)d.x-=2*rBox;
+      hPos[i*3]=cx+d.x;hPos[i*3+1]=cy+d.y-30;hPos[i*3+2]=cz+d.z;}
+    hGeo.attributes.position.needsUpdate=true;hail.material.opacity=.95*hailA;}
+}
+const boltGeo=new THREE.BufferGeometry();const boltPts=new Float32Array(40*3);boltGeo.setAttribute('position',new THREE.BufferAttribute(boltPts,3));
+const bolt=new THREE.Line(boltGeo,new THREE.LineBasicMaterial({color:0xf4f6ff,transparent:true,opacity:0,fog:false}));bolt.frustumCulled=false;scene.add(bolt);
+let boltT=0,nextAuto=6;
+function strike(){
+  const fwd=new THREE.Vector3();camera.getWorldDirection(fwd);fwd.y=0;fwd.normalize();
+  const dist=500+Math.random()*1300, side=(Math.random()-.5)*1.2;
+  const bx=camera.position.x+fwd.x*dist+fwd.z*side*dist, bz=camera.position.z+fwd.z*dist-fwd.x*side*dist;
+  let x=bx+(Math.random()-.5)*200,z=bz,y=520;
+  for(let i=0;i<40;i++){boltPts[i*3]=x;boltPts[i*3+1]=y;boltPts[i*3+2]=z;y-=13.3;x+=(Math.random()-.5)*30+(bx-x)*0.05;z+=(Math.random()-.5)*30;}
+  boltGeo.attributes.position.needsUpdate=true;S.flash=1;boltT=0.35;
+  if(S.sound&&AC){const delay=dist/340;thunder(delay,clamp(1-dist/2000,0.25,1));}
+}
+
+/* ---------------- sound ---------------- */
+let AC=null,windG,rainG;
+function startSound(){
+  if(AC)return; const A=window.AudioContext||window.webkitAudioContext; if(!A)return; AC=new A();
+  const len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);let last=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.5;}
+  const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=500;
+  windG=AC.createGain();windG.gain.value=0;src.connect(lp).connect(windG).connect(AC.destination);src.start();
+  const wb=AC.createBuffer(1,len,AC.sampleRate),wd=wb.getChannelData(0);for(let i=0;i<len;i++)wd[i]=Math.random()*2-1;
+  const s2=AC.createBufferSource();s2.buffer=wb;s2.loop=true;const hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=2500;
+  rainG=AC.createGain();rainG.gain.value=0;s2.connect(hp).connect(rainG).connect(AC.destination);s2.start();
+}
+function thunder(delay,vol){const t0=AC.currentTime+delay,len=AC.sampleRate*4,b=AC.createBuffer(1,len,AC.sampleRate),d=b.getChannelData(0);let l=0;
+  for(let i=0;i<len;i++){l=(l+0.04*(Math.random()*2-1))/1.04;d[i]=l*6*Math.exp(-i/len*3)*(0.6+0.4*Math.sin(i/AC.sampleRate*9));}
+  const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=260;const g=AC.createGain();g.gain.value=vol*0.9;
+  s.connect(f).connect(g).connect(AC.destination);s.start(t0);}
+
+/* ---------------- camera ---------------- */
+const orbit={th:0.42,ph:0.1,dist:170,tgt:new THREE.Vector3(0,7,0)};window.__orbit=orbit;
+const deckPos=new THREE.Vector3(),deckTgt=new THREE.Vector3(),upV=new THREE.Vector3();
+let drag=null;const pts=new Map();
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});drag={x:e.clientX,y:e.clientY};$('hint').style.opacity=0;});
+canvas.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const p=pts.get(e.pointerId);
+  if(pts.size===2){const arr=[...pts.values()];const o=arr[0]===p?arr[1]:arr[0];const d0=Math.hypot(p.x-o.x,p.y-o.y),d1=Math.hypot(e.clientX-o.x,e.clientY-o.y);if(d0>0)zoom(d0/d1);}
+  else{const dx=e.clientX-p.x,dy=e.clientY-p.y;
+    if(S.view==='orbit'){orbit.th-=dx*0.006;orbit.ph=clamp(orbit.ph+dy*0.004,0.03,1.2);}else{deckLook.yaw-=dx*0.005;deckLook.pitch=clamp(deckLook.pitch+dy*0.004,-0.6,0.5);}}
+  p.x=e.clientX;p.y=e.clientY;});
+const up=e=>{pts.delete(e.pointerId);};canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+function zoom(f){orbit.dist=clamp(orbit.dist*f,75,520);}
+canvas.addEventListener('wheel',e=>{if(S.view!=='orbit')return;e.preventDefault();zoom(Math.exp(e.deltaY*0.001));},{passive:false});
+const deckLook={yaw:0.95,pitch:-0.08};
+function placeCamera(){
+  if(S.view==='orbit'){const o=orbit;camera.up.set(0,1,0);
+    camera.position.set(o.tgt.x+o.dist*Math.sin(o.th)*Math.cos(o.ph),o.tgt.y+o.dist*Math.sin(o.ph),o.tgt.z+o.dist*Math.cos(o.th)*Math.cos(o.ph));
+    const wy=water(camera.position.x,camera.position.z).y;if(camera.position.y<wy+4)camera.position.y=wy+4;
+    camera.lookAt(o.tgt);}
+  else{ship.updateMatrixWorld(true);
+    deckPos.set(14,D+7.8,B/2-0.4).applyMatrix4(ship.matrixWorld);
+    const lx=14+Math.cos(deckLook.yaw)*100, lz=B/2+Math.sin(deckLook.yaw)*100, ly=D+7.8+Math.tan(deckLook.pitch)*100;
+    deckTgt.set(lx,ly,lz).applyMatrix4(ship.matrixWorld);
+    upV.set(0,1,0).applyQuaternion(pivot.quaternion);camera.up.copy(upV);
+    camera.position.copy(deckPos);camera.lookAt(deckTgt);}
+}
+
+/* ---------------- UI ---------------- */
+const STATES=[[0,'Calm (glassy)',0],[0.1,'Calm (rippled)',1],[0.5,'Smooth',2],[1.25,'Slight',3],[2.5,'Moderate',4],[4,'Rough',5],[6,'Very rough',6],[9,'High',7],[14,'Very high',8],[1e9,'Phenomenal',9]];
+function seaState(h){for(let i=0;i<STATES.length;i++){if(h<=STATES[i][0]||i===STATES.length-1)return STATES[i];}}
+const CMP=[[0.15,'a pencil'],[0.5,'a wellie boot'],[1.2,'a six-year-old'],[2.2,'a grown-up'],[3.5,'a basketball hoop'],[5,'a double-decker bus'],[8,'a two-storey house'],[11,'a three-storey building'],[15,'a four-storey building'],[1e9,'a six-storey building']];
+function setHs(v,fromPreset){S.hsTarget=v;$('wave').value=v;$('hsOut').textContent=v.toFixed(1);
+  document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.h===v)));
+  const prev=lastAuto; lastAuto=v;
+  const cross=th=>(prev<th)!==(v<th);
+  if(cross(5)){S.rain=v>=5;} if(cross(9)){S.light=v>=9;} if(cross(13)){S.hail=v>=13;}
+  syncWx();updateCards();}
+let lastAuto=3;
+$('wave').addEventListener('input',e=>setHs(+e.target.value));
+document.querySelectorAll('#presets button').forEach(b=>b.addEventListener('click',()=>setHs(+b.dataset.h)));
+const DIRS={side:-Math.PI/2,ahead:Math.PI,behind:0};
+document.querySelectorAll('#dirBtns button').forEach(b=>b.addEventListener('click',()=>{S.dirTarget=DIRS[b.dataset.d];
+  document.querySelectorAll('#dirBtns button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+function setStab(on){S.stab=on;$('stab2').checked=on;document.querySelectorAll('#stabBtns button').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.s==='1')===on)));}
+document.querySelectorAll('#stabBtns button').forEach(b=>b.addEventListener('click',()=>setStab(b.dataset.s==='1')));
+$('stab2').addEventListener('change',e=>setStab(e.target.checked));
+function syncWx(){$('bRain').setAttribute('aria-pressed',S.rain);$('bHail').setAttribute('aria-pressed',S.hail);$('bLight').setAttribute('aria-pressed',S.light);$('bSound').setAttribute('aria-pressed',S.sound);}
+$('bRain').onclick=()=>{S.rain=!S.rain;syncWx()};$('bHail').onclick=()=>{S.hail=!S.hail;syncWx()};$('bLight').onclick=()=>{S.light=!S.light;syncWx()};
+$('bSound').onclick=()=>{S.sound=!S.sound;if(S.sound){startSound();AC&&AC.resume&&AC.resume();}syncWx()};
+$('bStrike').onclick=()=>strike();
+document.querySelectorAll('#views button').forEach(b=>b.addEventListener('click',()=>{S.view=b.dataset.v;
+  document.querySelectorAll('#views button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  $('hint').textContent=S.view==='orbit'?'Drag to look around · scroll or pinch to zoom':'You are standing on the side deck · drag to turn your head';$('hint').style.opacity=.85;}));
+
+function updateCards(){
+  const h=S.hsTarget, st=seaState(h);
+  $('cState').textContent=st[1];$('cStateN').textContent='Douglas sea state '+st[2]+' of 9';
+  $('cCmp').textContent=(h<0.05?'nothing at all':CMP.find(c=>h<=c[0])[1]);
+  const pill=$('cSail');let cls='',txt,lbl;
+  if(h<4){lbl='Yes';txt='Sailing as normal.';}
+  else if(h<6){lbl='Probably';cls='warn';txt='A bumpy crossing. It may arrive a little late.';}
+  else if(h<9){lbl='Maybe';cls='warn';txt='Sailings are sometimes delayed or retimed to dodge the worst weather.';}
+  else{lbl='Unlikely';cls='bad';txt='In seas this big, crossings are often cancelled and ships wait in port. The captain decides.';}
+  pill.textContent=lbl;pill.className='pill'+(cls?' '+cls:'');$('cSailT').textContent=txt;
+}
+
+/* motion statistics */
+const hist=[];let statT=0;
+function stats(dt){
+  const w=water(0,0).y;
+  const aV=S.ah+S.ap*25, aL=G*Math.sin(S.roll)-11*S.ar;
+  hist.push({t:S.t,roll:S.roll,eta:w,aV,aL});
+  while(hist.length&&hist[0].t<S.t-60)hist.shift();
+  statT+=dt;if(statT<0.25)return;statT=0;
+  let mr=0,emin=1e9,emax=-1e9,sv=0,sl=0,n=0;
+  for(const h of hist){if(h.t>S.t-30)mr=Math.max(mr,Math.abs(h.roll));emin=Math.min(emin,h.eta);emax=Math.max(emax,h.eta);if(h.t>S.t-20){sv+=h.aV*h.aV;sl+=h.aL*h.aL;n++;}}
+  const deg=r=>(r*180/Math.PI);
+  $('hRoll').textContent=deg(S.roll).toFixed(0).replace('-0','0')+'°';$('hPitch').textContent=deg(S.pitch).toFixed(0).replace('-0','0')+'°';
+  $('hHeave').textContent=(S.heave>=0?'+':'')+S.heave.toFixed(1)+' m';$('hPer').textContent=Tp.toFixed(0)+' s';
+  $('hMax').textContent=Math.max(0,emax-emin).toFixed(1)+' m';$('hSpd').textContent=Math.round(S.U*1.944)+' kn';
+  $('cRoll').textContent=Math.abs(deg(S.roll)).toFixed(0)+'°';$('cMaxRoll').textContent=deg(mr).toFixed(0)+'°';
+  const idx=n?(Math.sqrt(sv/n)/1.0+Math.sqrt(sl/n)/2.2)/2.5:0; S.sick=idx;
+  const L5=[[0.25,'Fine','Walking around is easy.'],[0.6,'A bit wobbly','You might want to hold the handrail.'],[1.0,'Queasy','Hard to walk in a straight line.'],[1.6,'Seasick','Best to stay in your seat and look at the horizon.'],[1e9,'Very seasick','Lie down and close your eyes. Most people feel fine again soon after landing.']];
+  const lv=L5.find(l=>idx<l[0]);$('cSick').textContent=lv[1];$('cSickT').textContent=lv[2];$('cSickBar').style.width=Math.min(100,idx/2*100)+'%';
+}
+
+/* ---------------- café ---------------- */
+const cafe=$('cafe'),cx2=cafe.getContext('2d');
+const cup={s:0,v:0,fall:0};let css={};
+function readCss(){const g=getComputedStyle(document.documentElement);css={ink:g.getPropertyValue('--ink').trim(),card:g.getPropertyValue('--card').trim(),line:g.getPropertyValue('--line').trim(),signal:g.getPropertyValue('--signal').trim(),muted:g.getPropertyValue('--muted').trim()};}
+readCss();matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',readCss);new MutationObserver(readCss).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+function cafeTick(dt){
+  // sideways push felt along the table (ship frame): gravity tilt minus the roll's own acceleration
+  const a=G*Math.sin(S.roll)-11*S.ar; const mus=0.32,muk=0.24;
+  if(cup.fall>0){cup.fall+=dt;if(cup.fall>1.3){cup.fall=0;cup.s=0;cup.v=0;}}
+  else{
+    if(Math.abs(cup.v)<0.01&&Math.abs(a)<mus*G){cup.v=0;}
+    else{const sgn=Math.abs(cup.v)>0.01?Math.sign(cup.v):Math.sign(a);cup.v+=(a-sgn*muk*G)*dt;if(Math.abs(cup.v)<0.01&&Math.abs(a)<mus*G)cup.v=0;}
+    cup.s+=cup.v*dt; if(Math.abs(cup.s)>0.5){cup.fall=0.001;S.spills++;$('cSpill').textContent=S.spills;}}
+  // draw
+  const W=cafe.clientWidth,H=cafe.clientHeight,dpr=Math.min(2,window.devicePixelRatio||1);
+  if(cafe.width!==Math.round(W*dpr)){cafe.width=Math.round(W*dpr);cafe.height=Math.round(H*dpr);}
+  const c=cx2;c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
+  c.fillStyle='#24323a';c.fillRect(0,0,W,H);
+  c.save();c.translate(W/2,H*0.62);c.rotate(-S.roll);
+  const u=W/3.2;
+  c.fillStyle='#e9e2d4';c.fillRect(-W,-H,2*W,2*H); // cabin wall
+  c.fillStyle='#b8ad98';c.fillRect(-W,u*0.62,2*W,H); // floor
+  // porthole with the real horizon (stays level in the world)
+  const pr2=u*0.42;c.save();c.translate(-u*1.05,-u*0.75);c.beginPath();c.arc(0,0,pr2,0,7);c.clip();
+  c.rotate(S.roll);const hz=-S.pitch*pr2*4+water(0,B/2).y*0.6;
+  const isStorm=S.hs/14;c.fillStyle=`rgb(${lerp(150,60,isStorm)|0},${lerp(185,70,isStorm)|0},${lerp(210,80,isStorm)|0})`;c.fillRect(-pr2*2,-pr2*2,pr2*4,pr2*4);
+  c.fillStyle=`rgb(${lerp(20,15,isStorm)|0},${lerp(80,45,isStorm)|0},${lerp(100,55,isStorm)|0})`;c.fillRect(-pr2*2,hz,pr2*4,pr2*4);
+  if(S.flash>0.1){c.fillStyle=`rgba(255,255,255,${S.flash*0.6})`;c.fillRect(-pr2*2,-pr2*2,pr2*4,pr2*4);}
+  c.restore();c.lineWidth=u*0.07;c.strokeStyle='#8f8a80';c.beginPath();c.arc(-u*1.05,-u*0.75,pr2,0,7);c.stroke();
+  // table
+  c.fillStyle='#6d4c33';c.fillRect(-u*0.06,0,u*0.12,u*0.62);c.fillRect(-u*0.3,u*0.57,u*0.6,u*0.06);
+  c.fillStyle='#8a6243';c.fillRect(-u*0.62,-u*0.06,u*1.24,u*0.08);
+  // cup
+  let cxp=cup.s*u*1.2,cyp=-u*0.06,rot=0;
+  if(cup.fall>0){const s=Math.sign(cup.s);cxp=(0.5*s+cup.fall*0.4*s)*u*1.2;cyp=-u*0.06+0.5*G*cup.fall*cup.fall*u*0.55;rot=s*cup.fall*3;}
+  c.save();c.translate(cxp,cyp);c.rotate(rot);
+  const cw=u*0.16,chh=u*0.2;
+  // juice surface stays at right angles to the felt gravity
+  const tilt=Math.atan2(a,G*Math.cos(S.roll));
+  c.save();c.beginPath();c.rect(-cw/2,-chh,cw,chh);c.clip();c.translate(0,-chh*0.35);c.rotate(-tilt);c.fillStyle='#f39a1e';c.fillRect(-cw,0,cw*2,chh*2);c.restore();
+  c.lineWidth=u*0.018;c.strokeStyle='#f7f7f7';c.strokeRect(-cw/2,-chh,cw,chh);
+  c.beginPath();c.arc(cw/2+cw*0.18,-chh*0.55,cw*0.2,-1.4,1.4);c.stroke();
+  c.restore();c.restore();
+  // level indicator
+  c.fillStyle='rgba(40,34,28,.8)';c.font='700 13px '+getComputedStyle(document.body).fontFamily;c.textAlign='right';c.fillText(S.stab?'Stabilisers on':'Stabilisers off',W-12,22);c.textAlign='left';
+}
+
+/* ---------------- main loop ---------------- */
+let last=performance.now(),acc=0,ft=16,frames=0;
+function resize(){if(!renderer)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();pMat.uniforms.uScale.value=h*1.1;}
+window.addEventListener('resize',resize);resize();
+function frame(now){
+  let dt=Math.min(0.05,(now-last)/1000);last=now;
+  ft=ft*0.95+dt*1000*0.05;frames++;
+  if(renderer&&frames>90&&frames%60===0&&ft>34&&pr>0.7){pr=Math.max(0.7,pr-0.25);renderer.setPixelRatio(pr);resize();}
+  S.hs+= (S.hsTarget-S.hs)*(1-Math.exp(-dt*0.7));
+  let dd=S.dirTarget-S.dir;while(dd>Math.PI)dd-=2*Math.PI;while(dd<-Math.PI)dd+=2*Math.PI;S.dir+=dd*(1-Math.exp(-dt*0.8));
+  S.U=9.3*(1-0.55*smooth(5,15,S.hs));
+  spectrum();
+  acc+=dt;const H=1/120;let n=0;while(acc>=H&&n<10){physStep(H);acc-=H;n++;S.t+=H;}
+  if(n===10)acc=0;
+  pivot.position.set(xG,YG+S.heave,0);pivot.rotation.set(S.roll,0,S.pitch,'ZYX');
+  stats(dt);
+  if(renderer){
+    const st=smooth(4,14,S.hs);
+    for(const k of['top','hor','deep','shal'])col[k].copy(skyCalm[k]).lerp(skyStorm[k],st);
+    S.flash=Math.max(0,S.flash-dt*2.6);
+    if(S.light){nextAuto-=dt;if(nextAuto<=0){strike();nextAuto=4+Math.random()*9;}}
+    if(boltT>0){boltT-=dt;bolt.material.opacity=Math.random()<0.7?1:0.3;}else bolt.material.opacity=0;
+    for(let i=0;i<NW;i++){const c=C[i];uW[i].set(c.dx,c.dz,c.k,c.a);uPh[i]=c.ph;uQ[i]=c.Q;}
+    const u=oceanMat.uniforms;u.uStorm.value=st;u.uFlash.value=S.flash;u.uTime.value=S.t;u.uHs.value=S.hs;u.uFog.value=0.00028+st*0.0006+rainA*0.0003;
+    u.uWake.value=(u.uWake.value+S.U*dt)%10000;u.uSpd.value=S.U/9.3;u.uWdir.value.set(Math.cos(S.dir),Math.sin(S.dir));
+    skyMat.uniforms.uStorm.value=st;skyMat.uniforms.uFlash.value=S.flash;skyMat.uniforms.uTime.value=S.t;sky.position.copy(camera.position);
+    scene.fog.color.copy(col.hor);scene.fog.density=u.uFog.value;
+    hemi.intensity=0.95-st*0.35+S.flash*2;hemi.color.copy(col.hor);sun.intensity=1.5*(1-st*0.8)+S.flash*3;
+    window.__winMat.emissiveIntensity=0.15+st*1.3;
+    pMat.uniforms.uLight.value=1-st*0.35+S.flash*0.6;
+    sprayTick(dt);weatherTick(dt);
+    placeCamera();
+    renderer.render(scene,camera);
+  }
+  if(AC&&windG){const t=AC.currentTime;windG.gain.setTargetAtTime(S.sound?0.04+0.35*smooth(1,16,S.hs):0,t,0.3);rainG.gain.setTargetAtTime(S.sound?(rainA*0.06+hailA*0.08):0,t,0.3);}
+  cafeTick(dt);
+  requestAnimationFrame(frame);
+}
+updateCards();syncWx();
+window.__ff=(sec,hs)=>{if(hs!=null){setHs(hs);S.hs=hs;}S.U=9.3*(1-0.55*smooth(5,15,S.hs));S.dir=S.dirTarget;spectrum();const H=1/120;for(let i=0;i<sec*120;i++){physStep(H);S.t+=H;if(i%12===0)stats(0.3);}};
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
